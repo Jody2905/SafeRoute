@@ -1,0 +1,853 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>SafeRoute – Driver Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg: #07090f;
+    --surface: #0d1117;
+    --card: #111620;
+    --card2: #131921;
+    --border: #1e2535;
+    --accent: #00e5a0;
+    --accent2: #0080ff;
+    --warn: #ff9f43;
+    --danger: #ff4757;
+    --text: #e8edf5;
+    --muted: #6b7896;
+    --sidebar-w: 260px;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin:0; padding:0; }
+  html, body { height:100%; overflow:hidden; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    cursor: none;
+    display: flex;
+  }
+
+  /* ── Cursor ── */
+  .cursor      { width:10px;height:10px;background:var(--accent);border-radius:50%;position:fixed;top:0;left:0;pointer-events:none;z-index:9999;transform:translate(-50%,-50%);transition:transform .15s; }
+  .cursor-ring { width:30px;height:30px;border:1.5px solid rgba(0,229,160,.35);border-radius:50%;position:fixed;top:0;left:0;pointer-events:none;z-index:9998;transform:translate(-50%,-50%);transition:left .35s cubic-bezier(.25,.46,.45,.94),top .35s cubic-bezier(.25,.46,.45,.94); }
+
+  /* ── SIDEBAR ── */
+  .sidebar {
+    width: var(--sidebar-w);
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex; flex-direction:column;
+    height: 100vh;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 50;
+  }
+
+  .sidebar-logo {
+    padding: 1.5rem 1.5rem 1.25rem;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items:center; gap:.75rem;
+  }
+  .sidebar-logo a { font-family:'Syne',sans-serif; font-weight:800; font-size:1.2rem; letter-spacing:-.03em; color:var(--text); text-decoration:none; cursor:none; }
+  .sidebar-logo a span { color:var(--accent); }
+  .driver-badge-pill {
+    margin-left:auto;
+    background: rgba(0,128,255,.1);
+    border:1px solid rgba(0,128,255,.25);
+    color:var(--accent2);
+    font-size:.6rem; font-weight:700;
+    padding:2px 8px; border-radius:50px;
+    text-transform:uppercase; letter-spacing:.06em;
+  }
+
+  /* Driver profile */
+  .driver-profile {
+    padding:1.25rem 1.5rem;
+    border-bottom:1px solid var(--border);
+    display:flex; align-items:center; gap:.85rem;
+  }
+  .dp-avatar {
+    width:46px;height:46px;border-radius:14px;
+    background:linear-gradient(135deg,rgba(0,128,255,.25),rgba(0,229,160,.15));
+    border:1px solid var(--border);
+    display:flex;align-items:center;justify-content:center;font-size:1.5rem;
+    flex-shrink:0;
+  }
+  .dp-name { font-family:'Syne',sans-serif;font-weight:700;font-size:.9rem;margin-bottom:2px; }
+  .dp-plate { font-size:.7rem;color:var(--muted);font-family:monospace; }
+  .dp-rating { margin-left:auto;text-align:right; }
+  .dp-stars { font-size:.85rem;color:var(--warn); }
+  .dp-trips { font-size:.65rem;color:var(--muted); }
+
+  /* Online toggle */
+  .online-toggle {
+    padding:.9rem 1.5rem;
+    border-bottom:1px solid var(--border);
+    display:flex; align-items:center; justify-content:space-between;
+  }
+  .ot-label { font-size:.82rem;font-weight:500; }
+  .ot-sub   { font-size:.68rem;color:var(--muted); }
+  .big-toggle {
+    width:52px;height:28px;
+    background:var(--border);border-radius:50px;
+    position:relative;cursor:none;transition:background .25s;
+  }
+  .big-toggle.on { background:var(--accent); }
+  .big-toggle::after {
+    content:'';position:absolute;top:3px;left:3px;
+    width:22px;height:22px;background:#fff;border-radius:50%;
+    transition:left .25s;
+  }
+  .big-toggle.on::after { left:27px; }
+
+  /* Nav items */
+  .sidebar-nav { flex:1; padding:.75rem 0; overflow-y:auto; }
+  .nav-group-label {
+    font-size:.62rem; text-transform:uppercase; letter-spacing:.1em;
+    color:var(--muted); font-weight:600;
+    padding:.5rem 1.5rem .25rem;
+  }
+  .nav-item {
+    display:flex;align-items:center;gap:.75rem;
+    padding:.65rem 1.5rem;
+    border-radius:0; cursor:none;
+    transition:background .15s,color .15s;
+    font-size:.85rem; color:var(--muted);
+    position:relative;
+  }
+  .nav-item:hover { background:rgba(255,255,255,.03); color:var(--text); }
+  .nav-item.active { color:var(--accent); background:rgba(0,229,160,.05); }
+  .nav-item.active::before {
+    content:'';position:absolute;left:0;top:4px;bottom:4px;
+    width:3px;background:var(--accent);border-radius:0 2px 2px 0;
+  }
+  .nav-icon { font-size:1rem;width:20px;text-align:center; }
+  .nav-badge {
+    margin-left:auto;background:var(--accent);color:#000;
+    font-size:.6rem;font-weight:700;padding:2px 7px;border-radius:50px;
+  }
+  .nav-badge.warn { background:var(--warn); }
+
+  /* Sidebar footer */
+  .sidebar-footer {
+    padding:1rem 1.5rem;
+    border-top:1px solid var(--border);
+  }
+  .sf-btn {
+    width:100%;background:var(--card);border:1px solid var(--border);
+    border-radius:10px;padding:.55rem;
+    font-size:.78rem;color:var(--muted);cursor:none;
+    display:flex;align-items:center;justify-content:center;gap:.5rem;
+    transition:all .2s;
+  }
+  .sf-btn:hover { border-color:rgba(255,71,87,.3);color:var(--danger); }
+
+  /* ── MAIN CONTENT ── */
+  .main-content {
+    flex:1; display:flex; flex-direction:column;
+    height:100vh; overflow:hidden;
+  }
+
+  /* Top bar */
+  .topbar {
+    height:60px;
+    background:rgba(7,9,15,.9);
+    border-bottom:1px solid var(--border);
+    backdrop-filter:blur(20px);
+    display:flex;align-items:center;justify-content:space-between;
+    padding:0 1.75rem;
+    flex-shrink:0;
+  }
+  .topbar-title { font-family:'Syne',sans-serif;font-weight:700;font-size:1.1rem; }
+  .topbar-right { display:flex;align-items:center;gap:1rem; }
+  .tb-clock { font-family:'Syne',sans-serif;font-weight:700;font-size:.9rem;color:var(--muted); }
+  .tb-notif {
+    width:34px;height:34px;background:var(--card);border:1px solid var(--border);
+    border-radius:9px;display:flex;align-items:center;justify-content:center;
+    font-size:.9rem;cursor:none;transition:all .2s;position:relative;
+  }
+  .tb-notif:hover { border-color:rgba(0,229,160,.3); }
+  .notif-dot {
+    width:8px;height:8px;background:var(--warn);border-radius:50%;
+    position:absolute;top:-2px;right:-2px;
+    animation:notifPulse 2s infinite;
+  }
+  @keyframes notifPulse { 0%,100%{transform:scale(1)}50%{transform:scale(1.3)} }
+
+  /* Content area */
+  .content-area {
+    flex:1; overflow-y:auto; overflow-x:hidden;
+    padding:1.5rem 1.75rem;
+    display:flex; flex-direction:column; gap:1.25rem;
+  }
+  .content-area::-webkit-scrollbar { width:4px; }
+  .content-area::-webkit-scrollbar-thumb { background:var(--border);border-radius:2px; }
+
+  /* ── INCOMING RIDE ALERT ── */
+  .ride-alert {
+    background:linear-gradient(135deg, rgba(0,229,160,.08), rgba(0,128,255,.05));
+    border:1px solid rgba(0,229,160,.25);
+    border-radius:20px;
+    padding:1.25rem 1.5rem;
+    display:flex;align-items:center;gap:1.25rem;
+    animation:alertSlide .5s cubic-bezier(.34,1.56,.64,1) both, alertGlow 2s ease-in-out infinite;
+    position:relative;overflow:hidden;
+  }
+  @keyframes alertSlide { from{opacity:0;transform:translateY(-20px)} to{opacity:1;transform:translateY(0)} }
+  @keyframes alertGlow  { 0%,100%{box-shadow:0 0 0 0 rgba(0,229,160,0)} 50%{box-shadow:0 0 24px rgba(0,229,160,.12)} }
+  .alert-icon-wrap {
+    width:52px;height:52px;border-radius:14px;
+    background:rgba(0,229,160,.12);border:1px solid rgba(0,229,160,.25);
+    display:flex;align-items:center;justify-content:center;font-size:1.6rem;
+    flex-shrink:0;animation:iconBounce 1s ease-in-out infinite;
+  }
+  @keyframes iconBounce { 0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)} }
+  .alert-body { flex:1; }
+  .alert-title { font-family:'Syne',sans-serif;font-weight:700;font-size:1rem;margin-bottom:.2rem; }
+  .alert-title span { color:var(--accent); }
+  .alert-meta { font-size:.78rem;color:var(--muted);display:flex;gap:1rem;flex-wrap:wrap; }
+  .alert-meta b { color:var(--text);font-weight:500; }
+  .alert-timer {
+    font-family:'Syne',sans-serif;font-weight:800;font-size:1.6rem;
+    color:var(--warn);min-width:50px;text-align:center;
+  }
+  .alert-btns { display:flex;flex-direction:column;gap:.5rem; }
+  .btn-accept {
+    background:var(--accent);color:#000;border:none;border-radius:10px;
+    padding:.6rem 1.25rem;font-family:'Syne',sans-serif;font-weight:700;font-size:.85rem;
+    cursor:none;transition:all .2s;white-space:nowrap;
+  }
+  .btn-accept:hover { box-shadow:0 0 20px rgba(0,229,160,.3);transform:translateY(-1px); }
+  .btn-decline {
+    background:transparent;color:var(--muted);border:1px solid var(--border);
+    border-radius:10px;padding:.6rem 1.25rem;font-size:.82rem;
+    cursor:none;transition:all .2s;white-space:nowrap;
+  }
+  .btn-decline:hover { border-color:rgba(255,71,87,.3);color:var(--danger); }
+
+  /* ── STATS ROW ── */
+  .stats-row {
+    display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;
+  }
+  .stat-card {
+    background:var(--card);border:1px solid var(--border);border-radius:16px;
+    padding:1.25rem;transition:border-color .2s,transform .2s;
+    position:relative;overflow:hidden;
+  }
+  .stat-card::before {
+    content:'';position:absolute;top:0;left:0;right:0;height:2px;
+    opacity:0;transition:opacity .2s;
+  }
+  .stat-card.green::before { background:linear-gradient(90deg,var(--accent),transparent); }
+  .stat-card.blue::before  { background:linear-gradient(90deg,var(--accent2),transparent); }
+  .stat-card.warn::before  { background:linear-gradient(90deg,var(--warn),transparent); }
+  .stat-card.red::before   { background:linear-gradient(90deg,var(--danger),transparent); }
+  .stat-card:hover { border-color:rgba(0,229,160,.2);transform:translateY(-2px); }
+  .stat-card:hover::before { opacity:1; }
+  .stat-icon { font-size:1.25rem;margin-bottom:.75rem; }
+  .stat-val { font-family:'Syne',sans-serif;font-weight:800;font-size:1.8rem;letter-spacing:-.03em;margin-bottom:.2rem; }
+  .stat-val .unit { font-size:.9rem;font-weight:500;color:var(--muted); }
+  .stat-label { font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em; }
+  .stat-change { font-size:.72rem;margin-top:.35rem; }
+  .stat-change.up   { color:var(--accent); }
+  .stat-change.down { color:var(--danger); }
+
+  /* ── MIDDLE ROW ── */
+  .middle-row { display:grid;grid-template-columns:1fr 1fr;gap:1.25rem; }
+
+  /* Card base */
+  .dash-card {
+    background:var(--card);border:1px solid var(--border);
+    border-radius:18px;padding:1.25rem;
+  }
+  .card-header {
+    display:flex;align-items:center;justify-content:space-between;
+    margin-bottom:1rem;
+  }
+  .card-title { font-family:'Syne',sans-serif;font-weight:700;font-size:.95rem; }
+  .card-tag {
+    font-size:.65rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em;
+    padding:3px 10px;border-radius:50px;
+  }
+  .tag-green { background:rgba(0,229,160,.1);color:var(--accent); }
+  .tag-blue  { background:rgba(0,128,255,.1);color:var(--accent2); }
+  .tag-warn  { background:rgba(255,159,67,.1);color:var(--warn); }
+
+  /* Earnings chart (canvas) */
+  #earningsChart { width:100%;height:120px;display:block; }
+
+  /* Ride queue */
+  .ride-queue { display:flex;flex-direction:column;gap:.6rem; }
+  .queue-item {
+    background:var(--surface);border:1px solid var(--border);
+    border-radius:12px;padding:.85rem;
+    display:flex;align-items:center;gap:.85rem;
+    transition:border-color .2s;cursor:none;
+  }
+  .queue-item:hover { border-color:rgba(0,229,160,.25); }
+  .qi-num {
+    width:28px;height:28px;border-radius:8px;
+    background:rgba(0,229,160,.08);border:1px solid rgba(0,229,160,.15);
+    display:flex;align-items:center;justify-content:center;
+    font-family:'Syne',sans-serif;font-weight:700;font-size:.75rem;color:var(--accent);
+    flex-shrink:0;
+  }
+  .qi-body { flex:1; }
+  .qi-route { font-size:.82rem;font-weight:500;margin-bottom:2px; }
+  .qi-meta  { font-size:.7rem;color:var(--muted); }
+  .qi-fare  { font-family:'Syne',sans-serif;font-weight:700;font-size:.9rem;color:var(--accent); }
+
+  /* ── BOTTOM ROW ── */
+  .bottom-row { display:grid;grid-template-columns:1fr 1fr 1fr;gap:1.25rem; }
+
+  /* Trip history */
+  .trip-item {
+    display:flex;align-items:center;gap:.75rem;
+    padding:.65rem 0;border-bottom:1px solid var(--border);
+  }
+  .trip-item:last-child { border-bottom:none;padding-bottom:0; }
+  .trip-icon {
+    width:32px;height:32px;border-radius:9px;
+    display:flex;align-items:center;justify-content:center;font-size:.85rem;
+    flex-shrink:0;
+  }
+  .ti-done   { background:rgba(0,229,160,.08); }
+  .ti-cancel { background:rgba(255,71,87,.08); }
+  .trip-info { flex:1; }
+  .trip-dest { font-size:.82rem;font-weight:500; }
+  .trip-time { font-size:.68rem;color:var(--muted); }
+  .trip-fare { font-family:'Syne',sans-serif;font-weight:700;font-size:.85rem; }
+  .trip-fare.done   { color:var(--accent); }
+  .trip-fare.cancel { color:var(--danger); }
+
+  /* Performance ring */
+  .perf-center { display:flex;flex-direction:column;align-items:center;gap:1rem; }
+  #perfRing { width:130px;height:130px; }
+  .perf-stats { width:100%;display:flex;flex-direction:column;gap:.5rem; }
+  .perf-row { display:flex;align-items:center;justify-content:space-between;font-size:.78rem; }
+  .perf-label { color:var(--muted); }
+  .perf-bar { flex:1;height:4px;background:var(--border);border-radius:2px;margin:0 .6rem;overflow:hidden; }
+  .perf-fill { height:100%;border-radius:2px;transition:width .8s ease; }
+  .perf-val { font-weight:600;font-size:.78rem; }
+
+  /* Map mini */
+  #miniMap { width:100%;height:160px;border-radius:12px;display:block; }
+  .map-location-row { display:flex;align-items:center;gap:.6rem;margin-top:.75rem;font-size:.78rem;color:var(--muted); }
+  .map-dot { width:8px;height:8px;border-radius:50%;background:var(--accent);flex-shrink:0;animation:livePulse 1.5s infinite; }
+  @keyframes livePulse { 0%,100%{box-shadow:0 0 0 0 rgba(0,229,160,.4)}50%{box-shadow:0 0 0 5px rgba(0,229,160,0)} }
+
+  /* ── MODALS ── */
+  .modal-overlay { position:fixed;inset:0;z-index:500;background:rgba(7,9,15,.88);display:flex;align-items:center;justify-content:center;backdrop-filter:blur(8px);opacity:0;pointer-events:none;transition:opacity .3s; }
+  .modal-overlay.show { opacity:1;pointer-events:all; }
+  .modal-box { background:var(--card);border:1px solid var(--border);border-radius:22px;padding:2rem;max-width:400px;width:90%;transform:scale(.92);transition:transform .35s cubic-bezier(.34,1.56,.64,1); }
+  .modal-overlay.show .modal-box { transform:scale(1); }
+  .modal-box h3 { font-family:'Syne',sans-serif;font-weight:800;font-size:1.3rem;letter-spacing:-.03em;margin-bottom:.4rem; }
+  .modal-box p  { color:var(--muted);font-size:.85rem;line-height:1.6;margin-bottom:1.25rem; }
+  .modal-icon-big { font-size:2.5rem;margin-bottom:.75rem;display:block; }
+  .modal-actions { display:flex;gap:.75rem; }
+  .mbtn { flex:1;padding:.7rem;border-radius:11px;font-family:'Syne',sans-serif;font-weight:700;font-size:.85rem;cursor:none;transition:all .2s; }
+  .mbtn-primary { background:var(--accent);color:#000;border:none; }
+  .mbtn-primary:hover { box-shadow:0 0 20px rgba(0,229,160,.3); }
+  .mbtn-ghost { background:transparent;color:var(--muted);border:1px solid var(--border); }
+  .mbtn-ghost:hover { border-color:rgba(0,229,160,.2);color:var(--text); }
+
+  /* Toast */
+  .toast { position:fixed;bottom:2rem;left:50%;transform:translateX(-50%) translateY(100px);background:var(--card);border:1px solid var(--border);border-radius:12px;padding:.7rem 1.2rem;display:flex;align-items:center;gap:.6rem;font-size:.82rem;z-index:600;transition:transform .4s cubic-bezier(.34,1.56,.64,1);box-shadow:0 8px 32px rgba(0,0,0,.4); }
+  .toast.show { transform:translateX(-50%) translateY(0); }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width:4px; }
+  ::-webkit-scrollbar-thumb { background:var(--border);border-radius:2px; }
+
+  @media(max-width:1100px) { .stats-row { grid-template-columns:1fr 1fr; } .bottom-row { grid-template-columns:1fr 1fr; } }
+  @media(max-width:800px)  { .sidebar { display:none; } .middle-row,.bottom-row { grid-template-columns:1fr; } }
+</style>
+</head>
+<body>
+
+<div class="cursor" id="cursor"></div>
+<div class="cursor-ring" id="cursorRing"></div>
+
+<!-- SIDEBAR -->
+<div class="sidebar">
+  <div class="sidebar-logo">
+    <a href="saferoute-landing.html">Safe<span>Route</span></a>
+    <span class="driver-badge-pill">Driver</span>
+  </div>
+
+  <div class="driver-profile">
+    <div class="dp-avatar">👨🏽‍✈️</div>
+    <div>
+      <div class="dp-name">Marcus T.</div>
+      <div class="dp-plate">PBM 4421 · Toyota Corolla</div>
+    </div>
+    <div class="dp-rating">
+      <div class="dp-stars">★ 4.9</div>
+      <div class="dp-trips">312 trips</div>
+    </div>
+  </div>
+
+  <div class="online-toggle">
+    <div>
+      <div class="ot-label" id="onlineLabel">🟢 Online</div>
+      <div class="ot-sub" id="onlineSub">Accepting ride requests</div>
+    </div>
+    <div class="big-toggle on" id="onlineToggle" onclick="toggleOnline()"></div>
+  </div>
+
+  <nav class="sidebar-nav">
+    <div class="nav-group-label">Main</div>
+    <div class="nav-item active" onclick="setNav(this)"><span class="nav-icon">📊</span> Dashboard</div>
+    <div class="nav-item" onclick="go('saferoute-tracking.html')"><span class="nav-icon">🗺</span> Live Map</div>
+    <div class="nav-item" onclick="go('saferoute-ride-requests.html')"><span class="nav-icon">📋</span> Ride Requests <span class="nav-badge">2</span></div>
+    <div class="nav-item" onclick="go('saferoute-driver-trips.html')"><span class="nav-icon">📜</span> Trip History</div>
+
+    <div class="nav-group-label" style="margin-top:.75rem">Earnings</div>
+    <div class="nav-item" onclick="go('saferoute-earnings.html')"><span class="nav-icon">💰</span> Earnings</div>
+    <div class="nav-item" onclick="go('saferoute-performance.html')"><span class="nav-icon">📈</span> Performance</div>
+
+    <div class="nav-group-label" style="margin-top:.75rem">Account</div>
+    <div class="nav-item" onclick="go('saferoute-driver-settings.html')"><span class="nav-icon">⚙️</span> Settings</div>
+    <div class="nav-item" onclick="go('saferoute-privacy.html')"><span class="nav-icon">🛡</span> Safety Center</div>
+  </nav>
+
+  <div class="sidebar-footer">
+    <button class="sf-btn" onclick="driverSignOut()">🚪 Sign Out</button>
+  </div>
+</div>
+
+<!-- MAIN CONTENT -->
+<div class="main-content">
+
+  <!-- Top Bar -->
+  <div class="topbar">
+    <span class="topbar-title">Driver Dashboard</span>
+    <div class="topbar-right">
+      <span class="tb-clock" id="clockEl">--:--</span>
+      <div class="tb-notif" onclick="go('saferoute-driver-messages.html')">
+        🔔 <span class="notif-dot"></span>
+      </div>
+      <div class="tb-notif" onclick="go('saferoute-driver-messages.html')">💬</div>
+    </div>
+  </div>
+
+  <!-- Scrollable content -->
+  <div class="content-area" id="contentArea">
+
+    <!-- Incoming Ride Alert -->
+    <div class="ride-alert" id="rideAlert">
+      <div class="alert-icon-wrap">🚨</div>
+      <div class="alert-body">
+        <div class="alert-title">New Ride Request <span>Nearby!</span></div>
+        <div class="alert-meta">
+          <span>📍 Pickup: <b>New Kingston</b></span>
+          <span>🏁 Drop: <b>Downtown Kingston</b></span>
+          <span>📏 Distance: <b>3.2 km</b></span>
+          <span>💵 Fare: <b>$850 JMD</b></span>
+        </div>
+      </div>
+      <div class="alert-timer" id="alertTimer">15</div>
+      <div class="alert-btns">
+        <button class="btn-accept" onclick="acceptRide()">✅ Accept</button>
+        <button class="btn-decline" onclick="declineRide()">✕ Decline</button>
+      </div>
+    </div>
+
+    <!-- Stats Row -->
+    <div class="stats-row">
+      <div class="stat-card green">
+        <div class="stat-icon">💰</div>
+        <div class="stat-val" id="earningsVal">$4,<span style="font-size:1.4rem">250</span><span class="unit"> JMD</span></div>
+        <div class="stat-label">Today's Earnings</div>
+        <div class="stat-change up">↑ +18% vs yesterday</div>
+      </div>
+      <div class="stat-card blue">
+        <div class="stat-icon">🚕</div>
+        <div class="stat-val" id="tripsVal">7<span class="unit"> trips</span></div>
+        <div class="stat-label">Trips Today</div>
+        <div class="stat-change up">↑ 2 more than avg</div>
+      </div>
+      <div class="stat-card warn">
+        <div class="stat-icon">⏱</div>
+        <div class="stat-val">5.4<span class="unit"> hrs</span></div>
+        <div class="stat-label">Hours Online</div>
+        <div class="stat-change up">↑ Good session</div>
+      </div>
+      <div class="stat-card red">
+        <div class="stat-icon">⭐</div>
+        <div class="stat-val">4.9</div>
+        <div class="stat-label">Rating This Week</div>
+        <div class="stat-change up">↑ Top 5% of drivers</div>
+      </div>
+    </div>
+
+    <!-- Middle Row -->
+    <div class="middle-row">
+
+      <!-- Earnings Chart -->
+      <div class="dash-card">
+        <div class="card-header">
+          <span class="card-title">Weekly Earnings</span>
+          <span class="card-tag tag-green">This Week</span>
+        </div>
+        <canvas id="earningsChart"></canvas>
+        <div style="display:flex;justify-content:space-between;margin-top:.75rem;">
+          <div style="text-align:center;">
+            <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:1.1rem;">$28,400</div>
+            <div style="font-size:.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;">This Week</div>
+          </div>
+          <div style="text-align:center;">
+            <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:1.1rem;">$24,100</div>
+            <div style="font-size:.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;">Last Week</div>
+          </div>
+          <div style="text-align:center;">
+            <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:1.1rem;color:var(--accent);">+17.8%</div>
+            <div style="font-size:.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;">Change</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Ride Queue -->
+      <div class="dash-card">
+        <div class="card-header">
+          <span class="card-title">Nearby Requests</span>
+          <span class="card-tag tag-warn">2 Waiting</span>
+        </div>
+        <div class="ride-queue">
+          <div class="queue-item" onclick="openRideModal('New Kingston','Norman Manley Airport','$3,200 JMD','14.2 km')">
+            <div class="qi-num">1</div>
+            <div class="qi-body">
+              <div class="qi-route">New Kingston → Norman Manley Airport</div>
+              <div class="qi-meta">14.2 km · ~28 min · ★ 4.8 passenger</div>
+            </div>
+            <div class="qi-fare">$3,200</div>
+          </div>
+          <div class="queue-item" onclick="openRideModal('Halfway Tree','Spanish Town','$1,800 JMD','18.5 km')">
+            <div class="qi-num">2</div>
+            <div class="qi-body">
+              <div class="qi-route">Halfway Tree → Spanish Town</div>
+              <div class="qi-meta">18.5 km · ~35 min · ★ 5.0 passenger</div>
+            </div>
+            <div class="qi-fare">$1,800</div>
+          </div>
+          <div style="text-align:center;padding:.5rem;font-size:.75rem;color:var(--muted);">
+            Showing 2 of 5 nearby requests
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bottom Row -->
+    <div class="bottom-row">
+
+      <!-- Trip History -->
+      <div class="dash-card">
+        <div class="card-header">
+          <span class="card-title">Recent Trips</span>
+          <span class="card-tag tag-blue">Today</span>
+        </div>
+        <div>
+          <div class="trip-item">
+            <div class="trip-icon ti-done">✅</div>
+            <div class="trip-info">
+              <div class="trip-dest">Downtown Kingston</div>
+              <div class="trip-time">2:14 PM · 3.2 km · 8 min</div>
+            </div>
+            <div class="trip-fare done">+$850</div>
+          </div>
+          <div class="trip-item">
+            <div class="trip-icon ti-done">✅</div>
+            <div class="trip-info">
+              <div class="trip-dest">Portmore Mall</div>
+              <div class="trip-time">12:50 PM · 7.8 km · 18 min</div>
+            </div>
+            <div class="trip-fare done">+$1,400</div>
+          </div>
+          <div class="trip-item">
+            <div class="trip-icon ti-done">✅</div>
+            <div class="trip-info">
+              <div class="trip-dest">University of the West Indies</div>
+              <div class="trip-time">10:22 AM · 5.1 km · 14 min</div>
+            </div>
+            <div class="trip-fare done">+$1,100</div>
+          </div>
+          <div class="trip-item">
+            <div class="trip-icon ti-cancel">✕</div>
+            <div class="trip-info">
+              <div class="trip-dest">Liguanea Plaza</div>
+              <div class="trip-time">9:05 AM · Cancelled by passenger</div>
+            </div>
+            <div class="trip-fare cancel">—</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Performance -->
+      <div class="dash-card">
+        <div class="card-header">
+          <span class="card-title">Performance</span>
+          <span class="card-tag tag-green">This Month</span>
+        </div>
+        <div class="perf-center">
+          <canvas id="perfRing"></canvas>
+          <div class="perf-stats">
+            <div class="perf-row">
+              <span class="perf-label">Acceptance Rate</span>
+              <div class="perf-bar"><div class="perf-fill" style="width:92%;background:var(--accent);"></div></div>
+              <span class="perf-val" style="color:var(--accent)">92%</span>
+            </div>
+            <div class="perf-row">
+              <span class="perf-label">Completion Rate</span>
+              <div class="perf-bar"><div class="perf-fill" style="width:97%;background:var(--accent2);"></div></div>
+              <span class="perf-val" style="color:var(--accent2)">97%</span>
+            </div>
+            <div class="perf-row">
+              <span class="perf-label">On-Time Rate</span>
+              <div class="perf-bar"><div class="perf-fill" style="width:88%;background:var(--warn);"></div></div>
+              <span class="perf-val" style="color:var(--warn)">88%</span>
+            </div>
+            <div class="perf-row">
+              <span class="perf-label">Safety Score</span>
+              <div class="perf-bar"><div class="perf-fill" style="width:100%;background:var(--accent);"></div></div>
+              <span class="perf-val" style="color:var(--accent)">100%</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Mini Map -->
+      <div class="dash-card">
+        <div class="card-header">
+          <span class="card-title">Your Location</span>
+          <span class="card-tag tag-green">Live</span>
+        </div>
+        <canvas id="miniMap"></canvas>
+        <div class="map-location-row">
+          <div class="map-dot"></div>
+          <span id="locText">New Kingston, St. Andrew · updating...</span>
+        </div>
+        <div style="display:flex;gap:.5rem;margin-top:.75rem;">
+          <button style="flex:1;background:var(--surface);border:1px solid var(--border);border-radius:9px;padding:.5rem;font-size:.72rem;color:var(--muted);cursor:none;transition:all .2s;" onmouseenter="this.style.borderColor='rgba(0,229,160,.3)'" onmouseleave="this.style.borderColor='var(--border)'" onclick="showToast('📍','Location refreshed.')">🔄 Refresh</button>
+          <button style="flex:1;background:var(--surface);border:1px solid var(--border);border-radius:9px;padding:.5rem;font-size:.72rem;color:var(--muted);cursor:none;transition:all .2s;" onmouseenter="this.style.borderColor='rgba(0,229,160,.3)'" onmouseleave="this.style.borderColor='var(--border)'" onclick="go('saferoute-tracking.html')">🗺 Full Map</button>
+        </div>
+      </div>
+
+    </div>
+  </div><!-- end content-area -->
+</div><!-- end main-content -->
+
+<!-- RIDE MODAL -->
+<div class="modal-overlay" id="rideModal">
+  <div class="modal-box">
+    <span class="modal-icon-big">🚖</span>
+    <h3 id="rideModalTitle">Ride Details</h3>
+    <p id="rideModalBody">Loading...</p>
+    <div class="modal-actions">
+      <button class="mbtn mbtn-primary" onclick="confirmAccept()">✅ Accept Ride</button>
+      <button class="mbtn mbtn-ghost" onclick="closeModal('rideModal')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toastEl">
+  <span id="toastIcon"></span>
+  <span id="toastText"></span>
+</div>
+
+<script>
+/* ── Cursor ── */
+const cur  = document.getElementById('cursor');
+const ring = document.getElementById('cursorRing');
+document.addEventListener('mousemove', e => {
+  cur.style.left = e.clientX+'px'; cur.style.top = e.clientY+'px';
+  setTimeout(()=>{ ring.style.left=e.clientX+'px'; ring.style.top=e.clientY+'px'; }, 80);
+});
+document.querySelectorAll('a,button,.nav-item,.queue-item,.trip-item,.big-toggle').forEach(el=>{
+  el.addEventListener('mouseenter',()=>cur.style.transform='translate(-50%,-50%) scale(1.8)');
+  el.addEventListener('mouseleave',()=>cur.style.transform='translate(-50%,-50%) scale(1)');
+});
+
+/* ── Clock ── */
+function tick() { document.getElementById('clockEl').textContent = new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'}); }
+tick(); setInterval(tick,1000);
+
+/* ── Alert countdown ── */
+let alertCount = 15;
+const alertInterval = setInterval(()=>{
+  if(alertCount<=0){ clearInterval(alertInterval); declineRide(); return; }
+  alertCount--;
+  const el=document.getElementById('alertTimer');
+  if(el) el.textContent=alertCount;
+  if(alertCount<=5 && el) el.style.color='var(--danger)';
+},1000);
+
+function acceptRide() {
+  clearInterval(alertInterval);
+  document.getElementById('rideAlert').remove();
+  showToast('✅','Ride accepted! Head to New Kingston for pickup.');
+  document.getElementById('tripsVal').innerHTML = '8<span class="unit"> trips</span>';
+}
+function declineRide() {
+  clearInterval(alertInterval);
+  const a = document.getElementById('rideAlert');
+  if(a) { a.style.opacity='0'; a.style.transform='translateY(-20px)'; a.style.transition='all .4s'; setTimeout(()=>a.remove(),400); }
+  showToast('✕','Request declined. Looking for next ride...');
+}
+
+/* ── Online toggle ── */
+function toggleOnline() {
+  const t=document.getElementById('onlineToggle');
+  t.classList.toggle('on');
+  const on=t.classList.contains('on');
+  document.getElementById('onlineLabel').textContent = on ? '🟢 Online' : '🔴 Offline';
+  document.getElementById('onlineSub').textContent   = on ? 'Accepting ride requests' : 'Not accepting rides';
+  showToast(on?'🟢':'🔴', on?'You are now online.':'You have gone offline.');
+}
+
+/* ── Nav ── */
+function setNav(el) {
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  el.classList.add('active');
+}
+
+/* ── Ride modal ── */
+function openRideModal(from,to,fare,dist) {
+  document.getElementById('rideModalTitle').textContent=`${from} → ${to}`;
+  document.getElementById('rideModalBody').innerHTML=`<b>Fare:</b> ${fare}<br><b>Distance:</b> ${dist}<br><b>Estimated time:</b> ~${Math.round(parseInt(dist)*2)} min<br><br>Accept this ride request?`;
+  document.getElementById('rideModal').classList.add('show');
+}
+function confirmAccept() {
+  closeModal('rideModal');
+  showToast('✅','Ride accepted! Navigation starting...');
+}
+function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+
+/* ── Toast ── */
+let toastTimer;
+function showToast(icon,text) {
+  const el=document.getElementById('toastEl');
+  document.getElementById('toastIcon').textContent=icon;
+  document.getElementById('toastText').textContent=text;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>el.classList.remove('show'),2800);
+}
+
+/* ── Earnings Chart ── */
+function drawEarningsChart() {
+  const canvas=document.getElementById('earningsChart');
+  if(!canvas) return;
+  const W=canvas.offsetWidth, H=120;
+  canvas.width=W; canvas.height=H;
+  const ctx=canvas.getContext('2d');
+  const data=[2800,3200,4100,3600,4800,5200,4250];
+  const days=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  const max=Math.max(...data);
+  const barW=(W-60)/(data.length*2-1);
+  ctx.clearRect(0,0,W,H);
+
+  data.forEach((v,i)=>{
+    const x=30+i*(barW*2);
+    const bh=(v/max)*(H-30);
+    const y=H-20-bh;
+    const grad=ctx.createLinearGradient(0,y,0,H-20);
+    grad.addColorStop(0,i===6?'rgba(0,229,160,0.9)':'rgba(0,128,255,0.6)');
+    grad.addColorStop(1,i===6?'rgba(0,229,160,0.1)':'rgba(0,128,255,0.05)');
+    ctx.fillStyle=grad;
+    ctx.beginPath();
+    const r=4;
+    ctx.moveTo(x+r,y); ctx.lineTo(x+barW-r,y);
+    ctx.quadraticCurveTo(x+barW,y,x+barW,y+r);
+    ctx.lineTo(x+barW,H-20); ctx.lineTo(x,H-20);
+    ctx.lineTo(x,y+r); ctx.quadraticCurveTo(x,y,x+r,y);
+    ctx.closePath(); ctx.fill();
+
+    ctx.fillStyle=i===6?'var(--accent)':'var(--muted)';
+    ctx.font=`500 10px DM Sans`; ctx.textAlign='center';
+    ctx.fillText(days[i],x+barW/2,H-6);
+  });
+}
+setTimeout(drawEarningsChart,100);
+window.addEventListener('resize',drawEarningsChart);
+
+/* ── Performance Ring ── */
+function drawPerfRing() {
+  const canvas=document.getElementById('perfRing');
+  if(!canvas) return;
+  canvas.width=130; canvas.height=130;
+  const ctx=canvas.getContext('2d');
+  const cx=65, cy=65, r=52;
+  // BG
+  ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2);
+  ctx.strokeStyle='var(--border)'; ctx.lineWidth=10; ctx.stroke();
+  // Fill — 94% score
+  const pct=0.94;
+  ctx.beginPath(); ctx.arc(cx,cy,r,-Math.PI/2,-Math.PI/2+Math.PI*2*pct);
+  const grad=ctx.createLinearGradient(cx-r,cy,cx+r,cy);
+  grad.addColorStop(0,'#00e5a0'); grad.addColorStop(1,'#0080ff');
+  ctx.strokeStyle=grad; ctx.lineWidth=10; ctx.lineCap='round'; ctx.stroke();
+  // Text
+  ctx.fillStyle='#e8edf5';
+  ctx.font='bold 22px Syne'; ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText('94%',cx,cy-6);
+  ctx.font='500 10px DM Sans';
+  ctx.fillStyle='#6b7896';
+  ctx.fillText('Overall',cx,cy+12);
+}
+setTimeout(drawPerfRing,100);
+
+/* ── Mini Map ── */
+function drawMiniMap() {
+  const canvas=document.getElementById('miniMap');
+  if(!canvas) return;
+  const W=canvas.offsetWidth||300, H=160;
+  canvas.width=W; canvas.height=H;
+  const ctx=canvas.getContext('2d');
+
+  ctx.fillStyle='#080f14'; ctx.fillRect(0,0,W,H);
+
+  // Grid
+  ctx.strokeStyle='rgba(30,37,53,0.7)'; ctx.lineWidth=1;
+  for(let x=0;x<W;x+=30){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();}
+  for(let y=0;y<H;y+=30){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
+
+  // Roads
+  [[0,H*.4,W,H*.4],[0,H*.7,W,H*.65],[W*.3,0,W*.32,H],[W*.6,0,W*.62,H],[W*.8,0,W*.82,H]].forEach(([x1,y1,x2,y2])=>{
+    ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);
+    ctx.strokeStyle='rgba(30,40,60,0.9)';ctx.lineWidth=10;ctx.stroke();
+  });
+
+  // Accuracy circle
+  const t=Date.now()/1000;
+  ctx.beginPath();ctx.arc(W*.5,H*.45,18+Math.sin(t*2)*3,0,Math.PI*2);
+  ctx.fillStyle='rgba(0,229,160,.06)';ctx.fill();
+  ctx.strokeStyle='rgba(0,229,160,.2)';ctx.lineWidth=1.5;ctx.stroke();
+
+  // Driver dot
+  ctx.beginPath();ctx.arc(W*.5,H*.45,7,0,Math.PI*2);
+  ctx.fillStyle='rgba(0,229,160,.2)';ctx.fill();
+  ctx.beginPath();ctx.arc(W*.5,H*.45,4,0,Math.PI*2);
+  ctx.fillStyle='var(--accent)';ctx.fill();
+  ctx.font='14px serif';ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.fillText('🚕',W*.5,H*.45);
+
+  requestAnimationFrame(drawMiniMap);
+}
+setTimeout(drawMiniMap,150);
+
+/* ── Location text animation ── */
+const locs=['New Kingston, St. Andrew · updating...','18 Knutsford Blvd · accurate to 4m','New Kingston, St. Andrew · live'];
+let li=0;
+setInterval(()=>{ li=(li+1)%locs.length; const el=document.getElementById('locText'); if(el)el.textContent=locs[li]; },4000);
+
+function go(p){window.location.href=p;}
+function driverSignOut(){ showToast('👋','Logging out...'); setTimeout(()=>window.location.href='saferoute-auth.html',1200); }
+</script>
+</body>
+</html>

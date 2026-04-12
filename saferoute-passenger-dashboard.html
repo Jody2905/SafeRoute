@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>SafeRoute – My Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg: #07090f;
+    --surface: #0d1117;
+    --card: #111620;
+    --card2: #0f1419;
+    --border: #1e2535;
+    --accent: #00e5a0;
+    --accent2: #0080ff;
+    --accent3: #7c3aed;
+    --warn: #ff9f43;
+    --danger: #ff4757;
+    --text: #e8edf5;
+    --muted: #6b7896;
+    --sidebar-w: 255px;
+  }
+
+  *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
+  html,body { height:100%; overflow:hidden; }
+
+  body {
+    font-family:'DM Sans',sans-serif;
+    background:var(--bg);
+    color:var(--text);
+    cursor:none;
+    display:flex;
+  }
+
+  /* Cursor */
+  .cursor      { width:10px;height:10px;background:var(--accent);border-radius:50%;position:fixed;top:0;left:0;pointer-events:none;z-index:9999;transform:translate(-50%,-50%);transition:transform .15s; }
+  .cursor-ring { width:30px;height:30px;border:1.5px solid rgba(0,229,160,.35);border-radius:50%;position:fixed;top:0;left:0;pointer-events:none;z-index:9998;transform:translate(-50%,-50%);transition:left .35s cubic-bezier(.25,.46,.45,.94),top .35s cubic-bezier(.25,.46,.45,.94); }
+
+  /* ══ SIDEBAR ══ */
+  .sidebar {
+    width:var(--sidebar-w);
+    background:var(--surface);
+    border-right:1px solid var(--border);
+    display:flex;flex-direction:column;
+    height:100vh;flex-shrink:0;
+    position:relative;z-index:50;
+  }
+
+  .sb-logo {
+    padding:1.4rem 1.5rem 1.25rem;
+    border-bottom:1px solid var(--border);
+    display:flex;align-items:center;gap:.7rem;
+  }
+  .sb-logo a { font-family:'Syne',sans-serif;font-weight:800;font-size:1.25rem;letter-spacing:-.03em;color:var(--text);text-decoration:none;cursor:none; }
+  .sb-logo a span { color:var(--accent); }
+
+  /* User card */
+  .sb-user {
+    padding:1.1rem 1.5rem;
+    border-bottom:1px solid var(--border);
+    display:flex;align-items:center;gap:.85rem;
+  }
+  .sb-avatar {
+    width:42px;height:42px;border-radius:13px;flex-shrink:0;
+    background:linear-gradient(135deg,rgba(0,229,160,.25),rgba(0,128,255,.15));
+    border:1px solid rgba(0,229,160,.2);
+    display:flex;align-items:center;justify-content:center;font-size:1.3rem;
+    position:relative;
+  }
+  .sb-avatar .online-ring {
+    position:absolute;bottom:-2px;right:-2px;
+    width:12px;height:12px;background:var(--accent);
+    border-radius:50%;border:2px solid var(--surface);
+  }
+  .sb-uname { font-family:'Syne',sans-serif;font-weight:700;font-size:.9rem;margin-bottom:2px; }
+  .sb-email { font-size:.7rem;color:var(--muted); }
+  .sb-badge {
+    margin-left:auto;
+    background:rgba(0,229,160,.08);border:1px solid rgba(0,229,160,.2);
+    color:var(--accent);font-size:.6rem;font-weight:700;
+    padding:3px 9px;border-radius:50px;text-transform:uppercase;letter-spacing:.06em;
+    flex-shrink:0;
+  }
+
+  /* Safety score mini */
+  .sb-safety {
+    padding:.85rem 1.5rem;
+    border-bottom:1px solid var(--border);
+    display:flex;align-items:center;gap:.85rem;
+  }
+  .safety-ring-wrap { position:relative;width:40px;height:40px;flex-shrink:0; }
+  .safety-ring-wrap svg { position:absolute;inset:0;transform:rotate(-90deg); }
+  .safety-ring-wrap .score-num {
+    position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+    font-family:'Syne',sans-serif;font-weight:800;font-size:.65rem;color:var(--accent);
+  }
+  .sb-safety-label { font-size:.8rem;font-weight:500; }
+  .sb-safety-sub { font-size:.68rem;color:var(--muted); }
+
+  /* Nav */
+  .sb-nav { flex:1;padding:.6rem 0;overflow-y:auto; }
+  .sb-nav::-webkit-scrollbar { width:0; }
+  .nav-group { font-size:.62rem;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-weight:600;padding:.5rem 1.5rem .2rem; }
+  .nav-item {
+    display:flex;align-items:center;gap:.7rem;
+    padding:.62rem 1.5rem;cursor:none;
+    font-size:.84rem;color:var(--muted);
+    transition:background .15s,color .15s;position:relative;
+  }
+  .nav-item:hover { background:rgba(255,255,255,.025);color:var(--text); }
+  .nav-item.active { color:var(--accent);background:rgba(0,229,160,.05); }
+  .nav-item.active::before { content:'';position:absolute;left:0;top:5px;bottom:5px;width:3px;background:var(--accent);border-radius:0 2px 2px 0; }
+  .ni-icon { font-size:.95rem;width:18px;text-align:center; }
+  .ni-badge { margin-left:auto;background:var(--accent);color:#000;font-size:.58rem;font-weight:700;padding:2px 7px;border-radius:50px; }
+  .ni-badge.warn { background:var(--warn); }
+
+  /* Sidebar CTA */
+  .sb-cta {
+    padding:1.1rem 1.5rem;
+    border-top:1px solid var(--border);
+  }
+  .cta-book-btn {
+    width:100%;background:var(--accent);color:#000;border:none;
+    border-radius:11px;padding:.75rem;
+    font-family:'Syne',sans-serif;font-weight:700;font-size:.88rem;
+    cursor:none;transition:all .2s;
+    display:flex;align-items:center;justify-content:center;gap:.45rem;
+  }
+  .cta-book-btn:hover { box-shadow:0 0 24px rgba(0,229,160,.3);transform:translateY(-1px); }
+  .sb-signout {
+    width:100%;background:transparent;color:var(--muted);border:none;
+    font-size:.75rem;margin-top:.6rem;padding:.3rem;cursor:none;transition:color .2s;
+  }
+  .sb-signout:hover { color:var(--danger); }
+
+  /* ══ MAIN ══ */
+  .main {
+    flex:1;display:flex;flex-direction:column;
+    height:100vh;overflow:hidden;
+  }
+
+  /* Topbar */
+  .topbar {
+    height:60px;flex-shrink:0;
+    background:rgba(7,9,15,.9);border-bottom:1px solid var(--border);
+    backdrop-filter:blur(20px);
+    display:flex;align-items:center;justify-content:space-between;
+    padding:0 1.75rem;
+  }
+  .tb-greeting { font-family:'Syne',sans-serif;font-weight:700;font-size:1.05rem; }
+  .tb-greeting span { color:var(--accent); }
+  .tb-right { display:flex;align-items:center;gap:.85rem; }
+  .tb-clock { font-family:'Syne',sans-serif;font-weight:700;font-size:.88rem;color:var(--muted); }
+  .tb-icon-btn {
+    width:34px;height:34px;background:var(--card);border:1px solid var(--border);
+    border-radius:9px;display:flex;align-items:center;justify-content:center;
+    font-size:.9rem;cursor:none;transition:all .2s;position:relative;
+  }
+  .tb-icon-btn:hover { border-color:rgba(0,229,160,.3); }
+  .notif-pip { position:absolute;top:-3px;right:-3px;width:9px;height:9px;background:var(--warn);border-radius:50%;border:2px solid var(--bg);animation:pip 2s infinite; }
+  @keyframes pip { 0%,100%{transform:scale(1)}50%{transform:scale(1.3)} }
+
+  /* Content */
+  .content {
+    flex:1;overflow-y:auto;overflow-x:hidden;
+    padding:1.5rem 1.75rem;
+    display:flex;flex-direction:column;gap:1.25rem;
+  }
+  .content::-webkit-scrollbar { width:4px; }
+  .content::-webkit-scrollbar-thumb { background:var(--border);border-radius:2px; }
+
+  /* ── Active Ride Banner ── */
+  .active-ride-banner {
+    background:linear-gradient(135deg,rgba(0,128,255,.1),rgba(0,229,160,.06));
+    border:1px solid rgba(0,128,255,.3);
+    border-radius:18px;padding:1.25rem 1.5rem;
+    display:flex;align-items:center;gap:1.25rem;
+    animation:bannerIn .5s cubic-bezier(.34,1.56,.64,1) both, bannerGlow 2.5s ease-in-out infinite;
+    position:relative;overflow:hidden;
+  }
+  @keyframes bannerIn   { from{opacity:0;transform:translateY(-16px)} to{opacity:1;transform:translateY(0)} }
+  @keyframes bannerGlow { 0%,100%{box-shadow:0 0 0 0 transparent} 50%{box-shadow:0 0 30px rgba(0,128,255,.1)} }
+  .arb-icon { font-size:2rem;animation:carBob 1.2s ease-in-out infinite;flex-shrink:0; }
+  @keyframes carBob { 0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)} }
+  .arb-body { flex:1; }
+  .arb-title { font-family:'Syne',sans-serif;font-weight:700;font-size:.95rem;margin-bottom:.2rem; }
+  .arb-title span { color:var(--accent2); }
+  .arb-meta { font-size:.75rem;color:var(--muted);display:flex;gap:1rem;flex-wrap:wrap; }
+  .arb-meta b { color:var(--text);font-weight:500; }
+  .live-tag { background:rgba(0,229,160,.1);border:1px solid rgba(0,229,160,.25);color:var(--accent);font-size:.6rem;font-weight:700;padding:2px 9px;border-radius:50px;text-transform:uppercase;letter-spacing:.06em;animation:liveFlash 1.8s infinite; }
+  @keyframes liveFlash { 0%,100%{opacity:1}50%{opacity:.5} }
+  .arb-actions { display:flex;gap:.6rem; }
+  .arb-btn {
+    background:rgba(0,128,255,.15);border:1px solid rgba(0,128,255,.3);
+    border-radius:10px;padding:.5rem 1rem;
+    font-size:.78rem;font-weight:600;color:var(--accent2);cursor:none;transition:all .2s;
+  }
+  .arb-btn:hover { background:rgba(0,128,255,.25); }
+  .arb-btn.secondary { background:var(--card);border-color:var(--border);color:var(--muted); }
+  .arb-btn.secondary:hover { border-color:rgba(0,229,160,.2);color:var(--text); }
+
+  /* ── Stats row ── */
+  .stats-grid { display:grid;grid-template-columns:repeat(4,1fr);gap:1rem; }
+  .stat-card {
+    background:var(--card);border:1px solid var(--border);border-radius:16px;
+    padding:1.1rem 1.2rem;transition:all .2s;position:relative;overflow:hidden;
+    cursor:none;
+  }
+  .stat-card::after { content:'';position:absolute;top:0;left:0;right:0;height:2px;opacity:0;transition:opacity .2s; }
+  .stat-card.g::after { background:linear-gradient(90deg,var(--accent),transparent); }
+  .stat-card.b::after { background:linear-gradient(90deg,var(--accent2),transparent); }
+  .stat-card.w::after { background:linear-gradient(90deg,var(--warn),transparent); }
+  .stat-card.p::after { background:linear-gradient(90deg,#a78bfa,transparent); }
+  .stat-card:hover { transform:translateY(-3px);border-color:rgba(0,229,160,.2); }
+  .stat-card:hover::after { opacity:1; }
+  .sc-icon { font-size:1.2rem;margin-bottom:.6rem; }
+  .sc-val  { font-family:'Syne',sans-serif;font-weight:800;font-size:1.65rem;letter-spacing:-.03em;margin-bottom:.15rem; }
+  .sc-val .u { font-size:.85rem;font-weight:500;color:var(--muted); }
+  .sc-label { font-size:.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em; }
+  .sc-trend { font-size:.68rem;margin-top:.3rem; }
+  .sc-trend.up   { color:var(--accent); }
+  .sc-trend.down { color:var(--danger); }
+
+  /* ── Middle grid ── */
+  .middle-grid { display:grid;grid-template-columns:1.4fr 1fr;gap:1.25rem; }
+
+  /* Dash card base */
+  .dc {
+    background:var(--card);border:1px solid var(--border);
+    border-radius:18px;padding:1.25rem;
+  }
+  .dc-head { display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem; }
+  .dc-title { font-family:'Syne',sans-serif;font-weight:700;font-size:.95rem; }
+  .dc-tag { font-size:.62rem;font-weight:700;padding:3px 10px;border-radius:50px;text-transform:uppercase;letter-spacing:.05em; }
+  .tag-g { background:rgba(0,229,160,.1);color:var(--accent); }
+  .tag-b { background:rgba(0,128,255,.1);color:var(--accent2); }
+  .tag-w { background:rgba(255,159,67,.1);color:var(--warn); }
+  .tag-p { background:rgba(124,58,237,.1);color:#a78bfa; }
+
+  /* Trip history list */
+  .trip-list { display:flex;flex-direction:column; }
+  .trip-row {
+    display:flex;align-items:center;gap:.85rem;
+    padding:.7rem 0;border-bottom:1px solid var(--border);
+    cursor:none;transition:background .15s;border-radius:8px;
+    padding-left:.35rem;padding-right:.35rem;
+  }
+  .trip-row:last-child { border-bottom:none; }
+  .trip-row:hover { background:rgba(255,255,255,.02); }
+  .tr-icon { width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:.9rem;flex-shrink:0; }
+  .tr-icon.done   { background:rgba(0,229,160,.08); }
+  .tr-icon.active { background:rgba(0,128,255,.1);animation:iconPulse 1.5s infinite; }
+  .tr-icon.cancel { background:rgba(255,71,87,.08); }
+  @keyframes iconPulse { 0%,100%{box-shadow:0 0 0 0 rgba(0,128,255,.3)}50%{box-shadow:0 0 0 5px rgba(0,128,255,0)} }
+  .tr-body { flex:1;min-width:0; }
+  .tr-route { font-size:.82rem;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
+  .tr-meta  { font-size:.68rem;color:var(--muted);margin-top:1px; }
+  .tr-fare  { font-family:'Syne',sans-serif;font-weight:700;font-size:.88rem;text-align:right;flex-shrink:0; }
+  .tr-fare.done   { color:var(--accent); }
+  .tr-fare.cancel { color:var(--danger); }
+  .tr-fare.active { color:var(--accent2); }
+  .tr-status { font-size:.62rem;font-weight:700;padding:2px 7px;border-radius:50px;margin-top:2px;display:inline-block; }
+  .ts-done   { background:rgba(0,229,160,.1);color:var(--accent); }
+  .ts-active { background:rgba(0,128,255,.1);color:var(--accent2); }
+  .ts-cancel { background:rgba(255,71,87,.1);color:var(--danger); }
+
+  /* Trusted contacts */
+  .contact-list { display:flex;flex-direction:column;gap:.55rem; }
+  .contact-card {
+    background:var(--card2);border:1px solid var(--border);
+    border-radius:12px;padding:.75rem;
+    display:flex;align-items:center;gap:.75rem;
+    transition:border-color .2s;cursor:none;
+  }
+  .contact-card:hover { border-color:rgba(0,229,160,.25); }
+  .cc-avatar { width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0; }
+  .cc-av-green  { background:rgba(0,229,160,.1);border:1px solid rgba(0,229,160,.2); }
+  .cc-av-blue   { background:rgba(0,128,255,.1); border:1px solid rgba(0,128,255,.2); }
+  .cc-av-purple { background:rgba(124,58,237,.1);border:1px solid rgba(124,58,237,.2); }
+  .cc-name { font-size:.82rem;font-weight:500; }
+  .cc-rel  { font-size:.68rem;color:var(--muted); }
+  .cc-status { margin-left:auto;font-size:.62rem;font-weight:600;padding:2px 8px;border-radius:50px; }
+  .cs-on  { background:rgba(0,229,160,.1);color:var(--accent); }
+  .cs-off { background:rgba(107,120,150,.1);color:var(--muted); }
+  .cc-action {
+    width:28px;height:28px;background:var(--card);border:1px solid var(--border);
+    border-radius:8px;display:flex;align-items:center;justify-content:center;
+    font-size:.75rem;cursor:none;transition:all .2s;
+  }
+  .cc-action:hover { border-color:rgba(0,229,160,.3); }
+
+  /* ── Bottom grid ── */
+  .bottom-grid { display:grid;grid-template-columns:1fr 1fr 1fr;gap:1.25rem; }
+
+  /* Privacy settings */
+  .priv-row {
+    display:flex;align-items:center;justify-content:space-between;
+    padding:.6rem 0;border-bottom:1px solid var(--border);
+  }
+  .priv-row:last-child { border-bottom:none; }
+  .priv-left { display:flex;align-items:center;gap:.6rem; }
+  .priv-icon { font-size:.95rem;width:20px;text-align:center; }
+  .priv-label { font-size:.8rem;font-weight:500; }
+  .priv-sub   { font-size:.65rem;color:var(--muted); }
+  .tog { width:38px;height:21px;background:var(--border);border-radius:50px;position:relative;cursor:none;transition:background .2s;flex-shrink:0; }
+  .tog.on { background:var(--accent); }
+  .tog::after { content:'';position:absolute;top:2.5px;left:2.5px;width:16px;height:16px;background:#fff;border-radius:50%;transition:left .2s; }
+  .tog.on::after { left:19.5px; }
+
+  /* Spending chart */
+  canvas#spendChart { width:100%;height:110px;display:block; }
+  .spend-total { margin-top:.6rem;display:flex;justify-content:space-between;align-items:flex-end; }
+  .st-val { font-family:'Syne',sans-serif;font-weight:800;font-size:1.3rem; }
+  .st-sub { font-size:.68rem;color:var(--muted); }
+  .st-change { font-size:.72rem;color:var(--accent); }
+
+  /* Safety tips */
+  .tips-list { display:flex;flex-direction:column;gap:.55rem; }
+  .tip-item {
+    display:flex;gap:.7rem;align-items:flex-start;
+    background:var(--card2);border:1px solid var(--border);
+    border-radius:11px;padding:.7rem;transition:border-color .2s;
+  }
+  .tip-item:hover { border-color:rgba(0,229,160,.2); }
+  .tip-icon { font-size:1rem;flex-shrink:0;margin-top:1px; }
+  .tip-text { font-size:.75rem;color:var(--muted);line-height:1.5; }
+  .tip-text b { color:var(--text);font-weight:500; }
+
+  /* ── MODALS / TOAST ── */
+  .modal-overlay { position:fixed;inset:0;z-index:500;background:rgba(7,9,15,.88);display:flex;align-items:center;justify-content:center;backdrop-filter:blur(8px);opacity:0;pointer-events:none;transition:opacity .3s; }
+  .modal-overlay.show { opacity:1;pointer-events:all; }
+  .modal-box { background:var(--card);border:1px solid var(--border);border-radius:22px;padding:2rem;max-width:400px;width:90%;transform:scale(.9);transition:transform .35s cubic-bezier(.34,1.56,.64,1); }
+  .modal-overlay.show .modal-box { transform:scale(1); }
+  .modal-box h3 { font-family:'Syne',sans-serif;font-weight:800;font-size:1.25rem;letter-spacing:-.03em;margin-bottom:.35rem; }
+  .modal-box p  { color:var(--muted);font-size:.83rem;line-height:1.65;margin-bottom:1.25rem; }
+  .modal-icon-lg { font-size:2.5rem;display:block;margin-bottom:.75rem; }
+  .m-actions { display:flex;gap:.75rem; }
+  .mbtn { flex:1;padding:.7rem;border-radius:11px;font-family:'Syne',sans-serif;font-weight:700;font-size:.83rem;cursor:none;transition:all .2s; }
+  .mbtn-p { background:var(--accent);color:#000;border:none; }
+  .mbtn-p:hover { box-shadow:0 0 20px rgba(0,229,160,.3); }
+  .mbtn-g { background:transparent;color:var(--muted);border:1px solid var(--border); }
+  .mbtn-g:hover { border-color:rgba(0,229,160,.2);color:var(--text); }
+
+  .toast { position:fixed;bottom:2rem;left:50%;transform:translateX(-50%) translateY(100px);background:var(--card);border:1px solid var(--border);border-radius:12px;padding:.7rem 1.2rem;display:flex;align-items:center;gap:.6rem;font-size:.82rem;z-index:600;transition:transform .4s cubic-bezier(.34,1.56,.64,1);box-shadow:0 8px 32px rgba(0,0,0,.4); }
+  .toast.show { transform:translateX(-50%) translateY(0); }
+
+  /* Fade-in */
+  .fi { animation:fadeIn .5s ease both; }
+  @keyframes fadeIn { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:translateY(0)} }
+  .fi-1 { animation-delay:.05s; }
+  .fi-2 { animation-delay:.1s; }
+  .fi-3 { animation-delay:.15s; }
+  .fi-4 { animation-delay:.2s; }
+  .fi-5 { animation-delay:.25s; }
+
+  @media(max-width:1100px) { .stats-grid { grid-template-columns:1fr 1fr; } .bottom-grid { grid-template-columns:1fr 1fr; } }
+  @media(max-width:820px)  { .sidebar { display:none; } .middle-grid { grid-template-columns:1fr; } }
+</style>
+</head>
+<body>
+
+<div class="cursor" id="cursor"></div>
+<div class="cursor-ring" id="cursorRing"></div>
+
+<!-- ══ SIDEBAR ══ -->
+<div class="sidebar">
+
+  <div class="sb-logo">
+    <a href="saferoute-landing.html">Safe<span>Route</span></a>
+  </div>
+
+  <div class="sb-user">
+    <div class="sb-avatar">
+      👩🏽
+      <div class="online-ring"></div>
+    </div>
+    <div>
+      <div class="sb-uname">Jody-Ann T.</div>
+      <div class="sb-email"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="c9a3a6adb0a8a7a789aca4a8a0a5e7aaa6a4">[email&#160;protected]</a></div>
+    </div>
+    <span class="sb-badge">Passenger</span>
+  </div>
+
+  <!-- Safety score -->
+  <div class="sb-safety">
+    <div class="safety-ring-wrap">
+      <svg width="40" height="40" viewBox="0 0 40 40">
+        <circle cx="20" cy="20" r="16" fill="none" stroke="var(--border)" stroke-width="4"/>
+        <circle cx="20" cy="20" r="16" fill="none" stroke="var(--accent)" stroke-width="4"
+          stroke-dasharray="100.5" stroke-dashoffset="10" stroke-linecap="round"/>
+      </svg>
+      <div class="score-num">90</div>
+    </div>
+    <div>
+      <div class="sb-safety-label">Safety Score</div>
+      <div class="sb-safety-sub">Excellent — Top rider</div>
+    </div>
+  </div>
+
+  <nav class="sb-nav">
+    <div class="nav-group">Main</div>
+    <div class="nav-item active" onclick="setNav(this)"><span class="ni-icon">📊</span> Dashboard</div>
+    <div class="nav-item" onclick="goBook()"><span class="ni-icon">🚕</span> Book a Ride</div>
+    <div class="nav-item" onclick="goTrack()"><span class="ni-icon">🗺</span> Track My Ride <span class="ni-badge">Live</span></div>
+    <div class="nav-item" onclick="go('saferoute-trip-history.html')"><span class="ni-icon">📜 Trip History</div>
+
+    <div class="nav-group" style="margin-top:.6rem;">Safety</div>
+    <div class="nav-item" onclick="go('saferoute-contacts.html')"><span class="ni-icon">👥</span> Trusted Contacts</div>
+    <div class="nav-item" onclick="go('saferoute-privacy.html')"><span class="ni-icon">🔒</span> Privacy Settings</div>
+    <div class="nav-item" onclick="go('saferoute-notifications.html')"><span class="ni-icon">🔔</span> Notifications <span class="ni-badge warn">3</span></div>
+
+    <div class="nav-group" style="margin-top:.6rem;">Account</div>
+    <div class="nav-item" onclick="go('saferoute-profile.html')"><span class="ni-icon">👤</span> My Profile</div>
+    <div class="nav-item" onclick="go('saferoute-payments.html')"><span class="ni-icon">💳</span> Payment Methods</div>
+    <div class="nav-item" onclick="go('saferoute-reviews.html')"><span class="ni-icon">⭐</span> Reviews onclick="setNav(this)"><span class="ni-icon">⭐</span> Reviews & Ratings Ratings</div>
+    <div class="nav-item" onclick="go('saferoute-settings.html')"><span class="ni-icon">⚙️</span> Settings</div>
+  </nav>
+
+  <div class="sb-cta">
+    <button class="cta-book-btn" onclick="goBook()">🚕 Book a New Ride</button>
+    <button class="sb-signout" onclick="signOut()">Sign Out</button>
+  </div>
+
+</div>
+
+<!-- ══ MAIN ══ -->
+<div class="main">
+
+  <!-- Topbar -->
+  <div class="topbar">
+    <div class="tb-greeting">Good afternoon, <span>Jody-Ann</span> 👋</div>
+    <div class="tb-right">
+      <span class="tb-clock" id="clockEl">--:--</span>
+      <div class="tb-icon-btn" onclick="showToast('🔔','You have 3 unread notifications.')">🔔<span class="notif-pip"></span></div>
+      <div class="tb-icon-btn" onclick="showToast('💬','No new messages.')">💬</div>
+      <div class="tb-icon-btn" onclick="showModal('profileModal')">👤</div>
+    </div>
+  </div>
+
+  <!-- Content -->
+  <div class="content">
+
+    <!-- Active ride banner -->
+    <div class="active-ride-banner fi fi-1">
+      <div class="arb-icon">🚕</div>
+      <div class="arb-body">
+        <div class="arb-title">Ride <span>In Progress</span> — Marcus T. is on his way</div>
+        <div class="arb-meta">
+          <span>📍 Pickup: <b>New Kingston</b></span>
+          <span>🏁 Dest: <b>Downtown Kingston</b></span>
+          <span>⏱ ETA: <b>4 min</b></span>
+          <span>🚗 <b>PBM 4421</b></span>
+        </div>
+      </div>
+      <span class="live-tag">● Live</span>
+      <div class="arb-actions">
+        <button class="arb-btn" onclick="goTrack()">🗺 Track</button>
+        <button class="arb-btn secondary" onclick="showToast('📞','Calling driver...')">📞 Call</button>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-grid fi fi-2">
+      <div class="stat-card g">
+        <div class="sc-icon">🚕</div>
+        <div class="sc-val">47<span class="u"> rides</span></div>
+        <div class="sc-label">Total Rides</div>
+        <div class="sc-trend up">↑ +5 this month</div>
+      </div>
+      <div class="stat-card b">
+        <div class="sc-icon">💰</div>
+        <div class="sc-val">$38,<span style="font-size:1.1rem;">400</span><span class="u"> JMD</span></div>
+        <div class="sc-label">Total Spent</div>
+        <div class="sc-trend down">↓ Under budget</div>
+      </div>
+      <div class="stat-card w">
+        <div class="sc-icon">⭐</div>
+        <div class="sc-val">4.8</div>
+        <div class="sc-label">Your Rider Rating</div>
+        <div class="sc-trend up">↑ Highly rated</div>
+      </div>
+      <div class="stat-card p">
+        <div class="sc-icon">🛡</div>
+        <div class="sc-val">100<span class="u">%</span></div>
+        <div class="sc-label">Safe Arrivals</div>
+        <div class="sc-trend up">↑ All trips confirmed</div>
+      </div>
+    </div>
+
+    <!-- Middle grid -->
+    <div class="middle-grid fi fi-3">
+
+      <!-- Trip history -->
+      <div class="dc">
+        <div class="dc-head">
+          <span class="dc-title">Recent Trips</span>
+          <span class="dc-tag tag-b">Last 30 days</span>
+        </div>
+        <div class="trip-list">
+          <div class="trip-row">
+            <div class="tr-icon active">🔵</div>
+            <div class="tr-body">
+              <div class="tr-route">New Kingston → Downtown Kingston</div>
+              <div class="tr-meta">Today · 2:14 PM · Marcus T. · 3.2 km</div>
+              <span class="tr-status ts-active">In Progress</span>
+            </div>
+            <div class="tr-fare active">$850</div>
+          </div>
+          <div class="trip-row">
+            <div class="tr-icon done">✅</div>
+            <div class="tr-body">
+              <div class="tr-route">Portmore Mall → New Kingston</div>
+              <div class="tr-meta">Yesterday · 5:40 PM · Devon H. · 7.8 km</div>
+              <span class="tr-status ts-done">Completed</span>
+            </div>
+            <div class="tr-fare done">$1,400</div>
+          </div>
+          <div class="trip-row">
+            <div class="tr-icon done">✅</div>
+            <div class="tr-body">
+              <div class="tr-route">Half Way Tree → UWI Mona</div>
+              <div class="tr-meta">Mar 1 · 8:05 AM · Sandra M. · 5.1 km</div>
+              <span class="tr-status ts-done">Completed</span>
+            </div>
+            <div class="tr-fare done">$950</div>
+          </div>
+          <div class="trip-row">
+            <div class="tr-icon cancel">✕</div>
+            <div class="tr-body">
+              <div class="tr-route">New Kingston → Norman Manley Airport</div>
+              <div class="tr-meta">Feb 28 · 9:30 AM · Cancelled</div>
+              <span class="tr-status ts-cancel">Cancelled</span>
+            </div>
+            <div class="tr-fare cancel">—</div>
+          </div>
+          <div class="trip-row">
+            <div class="tr-icon done">✅</div>
+            <div class="tr-body">
+              <div class="tr-route">Spanish Town → Halfway Tree</div>
+              <div class="tr-meta">Feb 26 · 3:15 PM · Marcus T. · 18.5 km</div>
+              <span class="tr-status ts-done">Completed</span>
+            </div>
+            <div class="tr-fare done">$2,800</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Trusted contacts -->
+      <div class="dc">
+        <div class="dc-head">
+          <span class="dc-title">Trusted Contacts</span>
+          <span class="dc-tag tag-g">3 Active</span>
+        </div>
+        <div class="contact-list">
+          <div class="contact-card">
+            <div class="cc-avatar cc-av-green">👩</div>
+            <div>
+              <div class="cc-name">Mom</div>
+              <div class="cc-rel">Family · +1 876 555-0101</div>
+            </div>
+            <span class="cc-status cs-on">● Watching</span>
+            <div class="cc-action" onclick="showToast('📋','Tracking link copied for Mom.')">🔗</div>
+          </div>
+          <div class="contact-card">
+            <div class="cc-avatar cc-av-blue">👫</div>
+            <div>
+              <div class="cc-name">Best Friend</div>
+              <div class="cc-rel">Friend · +1 876 555-0188</div>
+            </div>
+            <span class="cc-status cs-off">Notified</span>
+            <div class="cc-action" onclick="showToast('📋','Tracking link copied.')">🔗</div>
+          </div>
+          <div class="contact-card">
+            <div class="cc-avatar cc-av-purple">👨</div>
+            <div>
+              <div class="cc-name">Dad</div>
+              <div class="cc-rel">Family · +1 876 555-0144</div>
+            </div>
+            <span class="cc-status cs-off">Offline</span>
+            <div class="cc-action" onclick="showToast('📋','Tracking link copied for Dad.')">🔗</div>
+          </div>
+        </div>
+        <button style="width:100%;margin-top:.85rem;background:rgba(0,229,160,.06);border:1px dashed rgba(0,229,160,.25);border-radius:10px;padding:.6rem;font-size:.78rem;color:var(--accent);cursor:none;transition:all .2s;" onmouseenter="this.style.background='rgba(0,229,160,.1)'" onmouseleave="this.style.background='rgba(0,229,160,.06)'" onclick="showToast('➕','Add contact feature coming soon.')">+ Add Trusted Contact</button>
+      </div>
+
+    </div>
+
+    <!-- Bottom grid -->
+    <div class="bottom-grid fi fi-4">
+
+      <!-- Spending chart -->
+      <div class="dc">
+        <div class="dc-head">
+          <span class="dc-title">Monthly Spending</span>
+          <span class="dc-tag tag-w">6 Months</span>
+        </div>
+        <canvas id="spendChart"></canvas>
+        <div class="spend-total">
+          <div>
+            <div class="st-val">$38,400 <span style="font-size:.7rem;color:var(--muted);">JMD</span></div>
+            <div class="st-sub">Total this period</div>
+          </div>
+          <div style="text-align:right;">
+            <div class="st-change">↓ 12% vs last period</div>
+            <div class="st-sub">Under budget 👍</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Privacy settings -->
+      <div class="dc">
+        <div class="dc-head">
+          <span class="dc-title">Privacy Settings</span>
+          <span class="dc-tag tag-g">Active</span>
+        </div>
+        <div>
+          <div class="priv-row">
+            <div class="priv-left"><span class="priv-icon">🔒</span><div><div class="priv-label">Private Tracking Links</div><div class="priv-sub">Secure token-based sharing</div></div></div>
+            <div class="tog on" onclick="this.classList.toggle('on');showToast('🔒','Private links '+(this.classList.contains('on')?'enabled':'disabled')+'.')"></div>
+          </div>
+          <div class="priv-row">
+            <div class="priv-left"><span class="priv-icon">🌐</span><div><div class="priv-label">Open Route Visibility</div><div class="priv-sub">Others see direction only</div></div></div>
+            <div class="tog" onclick="this.classList.toggle('on');showToast('🌐','Open route mode '+(this.classList.contains('on')?'on':'off')+'.')"></div>
+          </div>
+          <div class="priv-row">
+            <div class="priv-left"><span class="priv-icon">🔔</span><div><div class="priv-label">Arrival Notifications</div><div class="priv-sub">Alert contacts on arrival</div></div></div>
+            <div class="tog on" onclick="this.classList.toggle('on')"></div>
+          </div>
+          <div class="priv-row">
+            <div class="priv-left"><span class="priv-icon">🛑</span><div><div class="priv-label">Auto-Stop GPS</div><div class="priv-sub">Tracking ends at destination</div></div></div>
+            <div class="tog on" onclick="this.classList.toggle('on');showToast('⚠️','Keep auto-stop on for your safety.')"></div>
+          </div>
+          <div class="priv-row">
+            <div class="priv-left"><span class="priv-icon">🗑</span><div><div class="priv-label">Auto-Delete GPS Logs</div><div class="priv-sub">Purge data after 24 hrs</div></div></div>
+            <div class="tog on" onclick="this.classList.toggle('on')"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Safety tips -->
+      <div class="dc">
+        <div class="dc-head">
+          <span class="dc-title">Safety Tips</span>
+          <span class="dc-tag tag-p">For You</span>
+        </div>
+        <div class="tips-list">
+          <div class="tip-item">
+            <span class="tip-icon">🔍</span>
+            <div class="tip-text"><b>Verify your driver.</b> Always confirm the plate number and driver name before entering the vehicle.</div>
+          </div>
+          <div class="tip-item">
+            <span class="tip-icon">📱</span>
+            <div class="tip-text"><b>Share your trip.</b> Always enable trusted contact sharing — especially for night rides.</div>
+          </div>
+          <div class="tip-item">
+            <span class="tip-icon">🆘</span>
+            <div class="tip-text"><b>SOS feature.</b> Use the in-app SOS button to instantly alert emergency contacts if you feel unsafe.</div>
+          </div>
+          <div class="tip-item">
+            <span class="tip-icon">🔒</span>
+            <div class="tip-text"><b>Keep auto-stop on.</b> This ensures your GPS data is never retained beyond your journey.</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+  </div><!-- end content -->
+</div><!-- end main -->
+
+<!-- Profile Modal -->
+<div class="modal-overlay" id="profileModal">
+  <div class="modal-box">
+    <span class="modal-icon-lg">👩🏽</span>
+    <h3>Jody-Ann Trimmingham</h3>
+    <p>Passenger account · Member since January 2024 · 47 trips completed · Safety score: 90/100</p>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:.9rem;margin-bottom:1.25rem;">
+      <div style="display:flex;justify-content:space-between;font-size:.78rem;margin-bottom:.5rem;"><span style="color:var(--muted);">Email</span><span><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="8be1e4eff2eae5e5cbeee6eae2e7a5e8e4e6">[email&#160;protected]</a></span></div>
+      <div style="display:flex;justify-content:space-between;font-size:.78rem;margin-bottom:.5rem;"><span style="color:var(--muted);">Phone</span><span>+1 876 555-0199</span></div>
+      <div style="display:flex;justify-content:space-between;font-size:.78rem;"><span style="color:var(--muted);">Rating</span><span style="color:var(--warn);">★ 4.8</span></div>
+    </div>
+    <div class="m-actions">
+      <button class="mbtn mbtn-p" onclick="closeModal('profileModal')">✏️ Edit Profile</button>
+      <button class="mbtn mbtn-g" onclick="closeModal('profileModal')">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toastEl"><span id="toastIcon"></span><span id="toastText"></span></div>
+
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+/* ── Cursor ── */
+const cur=document.getElementById('cursor'), ring=document.getElementById('cursorRing');
+document.addEventListener('mousemove',e=>{
+  cur.style.left=e.clientX+'px';cur.style.top=e.clientY+'px';
+  setTimeout(()=>{ring.style.left=e.clientX+'px';ring.style.top=e.clientY+'px';},80);
+});
+document.querySelectorAll('a,button,.nav-item,.stat-card,.trip-row,.contact-card,.tip-item,.tog').forEach(el=>{
+  el.addEventListener('mouseenter',()=>cur.style.transform='translate(-50%,-50%) scale(1.8)');
+  el.addEventListener('mouseleave',()=>cur.style.transform='translate(-50%,-50%) scale(1)');
+});
+
+/* ── Clock ── */
+function tick(){ document.getElementById('clockEl').textContent=new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'}); }
+tick(); setInterval(tick,1000);
+
+/* ── Nav ── */
+function setNav(el){ document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active')); el.classList.add('active'); }
+function goBook()  { window.location.href='saferoute-booking.html'; }
+function goTrack() { window.location.href='saferoute-tracking.html'; }
+
+/* ── Modal ── */
+function showModal(id){ document.getElementById(id).classList.add('show'); }
+function closeModal(id){ document.getElementById(id).classList.remove('show'); }
+
+/* ── Toast ── */
+let toastTimer;
+function showToast(icon,text){
+  const el=document.getElementById('toastEl');
+  document.getElementById('toastIcon').textContent=icon;
+  document.getElementById('toastText').textContent=text;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>el.classList.remove('show'),2800);
+}
+
+/* ── Spending Chart ── */
+function drawSpendChart(){
+  const canvas=document.getElementById('spendChart');
+  if(!canvas) return;
+  const W=canvas.offsetWidth||300, H=110;
+  canvas.width=W; canvas.height=H;
+  const ctx=canvas.getContext('2d');
+  const data=[4200,6800,5500,7200,6100,8500];
+  const months=['Oct','Nov','Dec','Jan','Feb','Mar'];
+  const max=Math.max(...data);
+
+  ctx.clearRect(0,0,W,H);
+
+  // Draw area fill under line
+  const pts=data.map((v,i)=>({x:30+i*((W-60)/5), y:H-22-(v/max)*(H-38)}));
+  ctx.beginPath();
+  ctx.moveTo(pts[0].x,H-22);
+  pts.forEach(p=>ctx.lineTo(p.x,p.y));
+  ctx.lineTo(pts[pts.length-1].x,H-22);
+  ctx.closePath();
+  const grad=ctx.createLinearGradient(0,0,0,H);
+  grad.addColorStop(0,'rgba(255,159,67,0.18)');
+  grad.addColorStop(1,'rgba(255,159,67,0)');
+  ctx.fillStyle=grad; ctx.fill();
+
+  // Line
+  ctx.beginPath();
+  ctx.moveTo(pts[0].x,pts[0].y);
+  for(let i=1;i<pts.length;i++){
+    const mx=(pts[i-1].x+pts[i].x)/2;
+    ctx.bezierCurveTo(mx,pts[i-1].y,mx,pts[i].y,pts[i].x,pts[i].y);
+  }
+  ctx.strokeStyle='rgba(255,159,67,0.8)';ctx.lineWidth=2.5;ctx.stroke();
+
+  // Points
+  pts.forEach((p,i)=>{
+    ctx.beginPath();ctx.arc(p.x,p.y,i===5?6:4,0,Math.PI*2);
+    ctx.fillStyle=i===5?'#ff9f43':'rgba(255,159,67,0.5)';ctx.fill();
+    if(i===5){ ctx.beginPath();ctx.arc(p.x,p.y,10,0,Math.PI*2);ctx.fillStyle='rgba(255,159,67,0.15)';ctx.fill(); }
+    // Month labels
+    ctx

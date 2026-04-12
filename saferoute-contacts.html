@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>SafeRoute – Trusted Contacts</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+<style>
+
+  :root{--bg:#07090f;--surface:#0d1117;--card:#111620;--border:#1e2535;--accent:#00e5a0;--accent2:#0080ff;--warn:#ff9f43;--danger:#ff4757;--text:#e8edf5;--muted:#6b7896;--sw:255px;}
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+  html,body{height:100%;overflow:hidden;}
+  body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);cursor:none;display:flex;}
+  .cursor{width:10px;height:10px;background:var(--accent);border-radius:50%;position:fixed;top:0;left:0;pointer-events:none;z-index:9999;transform:translate(-50%,-50%);transition:transform .15s;}
+  .cursor-ring{width:30px;height:30px;border:1.5px solid rgba(0,229,160,.35);border-radius:50%;position:fixed;top:0;left:0;pointer-events:none;z-index:9998;transform:translate(-50%,-50%);transition:left .35s cubic-bezier(.25,.46,.45,.94),top .35s cubic-bezier(.25,.46,.45,.94);}
+  .sidebar{width:var(--sw);background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;height:100vh;flex-shrink:0;}
+  .sb-logo{padding:1.4rem 1.5rem;border-bottom:1px solid var(--border);}
+  .sb-logo a{font-family:'Syne',sans-serif;font-weight:800;font-size:1.2rem;letter-spacing:-.03em;color:var(--text);text-decoration:none;cursor:none;}
+  .sb-logo a span{color:var(--accent);}
+  .sb-user{padding:1rem 1.5rem;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:.8rem;}
+  .sb-av{width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,rgba(0,229,160,.2),rgba(0,128,255,.1));border:1px solid rgba(0,229,160,.2);display:flex;align-items:center;justify-content:center;font-size:1.2rem;}
+  .sb-name{font-family:'Syne',sans-serif;font-weight:700;font-size:.88rem;}
+  .sb-email{font-size:.68rem;color:var(--muted);}
+  .sb-nav{flex:1;padding:.5rem 0;overflow-y:auto;}
+  .sb-nav::-webkit-scrollbar{width:0;}
+  .ng{font-size:.6rem;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-weight:600;padding:.5rem 1.5rem .2rem;}
+  .ni{display:flex;align-items:center;gap:.7rem;padding:.6rem 1.5rem;cursor:none;font-size:.82rem;color:var(--muted);transition:background .15s,color .15s;position:relative;}
+  .ni:hover{background:rgba(255,255,255,.025);color:var(--text);}
+  .ni.active{color:var(--accent);background:rgba(0,229,160,.05);}
+  .ni.active::before{content:'';position:absolute;left:0;top:5px;bottom:5px;width:3px;background:var(--accent);border-radius:0 2px 2px 0;}
+  .nib{margin-left:auto;background:var(--accent);color:#000;font-size:.58rem;font-weight:700;padding:2px 7px;border-radius:50px;}
+  .nib.w{background:var(--warn);}
+  .sb-bot{padding:1rem 1.5rem;border-top:1px solid var(--border);}
+  .book-btn{width:100%;background:var(--accent);color:#000;border:none;border-radius:11px;padding:.7rem;font-family:'Syne',sans-serif;font-weight:700;font-size:.85rem;cursor:none;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:.4rem;}
+  .book-btn:hover{box-shadow:0 0 22px rgba(0,229,160,.3);transform:translateY(-1px);}
+  .so-btn{width:100%;background:transparent;color:var(--muted);border:none;font-size:.72rem;margin-top:.5rem;padding:.25rem;cursor:none;transition:color .2s;}
+  .so-btn:hover{color:var(--danger);}
+  .main{flex:1;display:flex;flex-direction:column;height:100vh;overflow:hidden;}
+  .topbar{height:60px;flex-shrink:0;background:rgba(7,9,15,.9);border-bottom:1px solid var(--border);backdrop-filter:blur(20px);display:flex;align-items:center;justify-content:space-between;padding:0 1.75rem;}
+  .tb-title{font-family:'Syne',sans-serif;font-weight:700;font-size:1.05rem;}
+  .tb-r{display:flex;align-items:center;gap:.75rem;}
+  .tb-clk{font-family:'Syne',sans-serif;font-weight:700;font-size:.88rem;color:var(--muted);}
+  .tb-btn{height:34px;padding:0 .9rem;background:var(--card);border:1px solid var(--border);border-radius:9px;font-size:.78rem;color:var(--muted);cursor:none;transition:all .2s;display:flex;align-items:center;gap:.4rem;}
+  .tb-btn:hover{border-color:rgba(0,229,160,.3);color:var(--text);}
+  .tb-btn.primary{background:var(--accent);color:#000;border-color:var(--accent);font-weight:600;}
+  .content{flex:1;overflow-y:auto;overflow-x:hidden;padding:1.5rem 1.75rem;display:flex;flex-direction:column;gap:1.25rem;}
+  .content::-webkit-scrollbar{width:4px;}
+  .content::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+  .dc{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:1.25rem;}
+  .dc-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;}
+  .dc-title{font-family:'Syne',sans-serif;font-weight:700;font-size:.95rem;}
+  .dc-tag{font-size:.62rem;font-weight:700;padding:3px 10px;border-radius:50px;text-transform:uppercase;letter-spacing:.05em;}
+  .tag-g{background:rgba(0,229,160,.1);color:var(--accent);}
+  .tag-b{background:rgba(0,128,255,.1);color:var(--accent2);}
+  .tag-w{background:rgba(255,159,67,.1);color:var(--warn);}
+  .tag-r{background:rgba(255,71,87,.1);color:var(--danger);}
+  .field{display:flex;flex-direction:column;gap:.35rem;margin-bottom:.85rem;}
+  .field label{font-size:.68rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;}
+  input[type=text],input[type=email],input[type=tel],input[type=password],select,textarea{width:100%;background:var(--card);border:1px solid var(--border);border-radius:11px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:.88rem;padding:.75rem .9rem;outline:none;transition:border-color .2s,box-shadow .2s;cursor:none;appearance:none;}
+  input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(0,229,160,.07);}
+  input::placeholder,textarea::placeholder{color:var(--muted);opacity:.6;}
+  textarea{resize:vertical;min-height:80px;}
+  .tog{width:40px;height:22px;background:var(--border);border-radius:50px;position:relative;cursor:none;transition:background .2s;flex-shrink:0;}
+  .tog.on{background:var(--accent);}
+  .tog::after{content:'';position:absolute;top:3px;left:3px;width:16px;height:16px;background:#fff;border-radius:50%;transition:left .2s;}
+  .tog.on::after{left:21px;}
+  .btn-primary{background:var(--accent);color:#000;border:none;border-radius:11px;padding:.75rem 1.5rem;font-family:'Syne',sans-serif;font-weight:700;font-size:.88rem;cursor:none;transition:all .2s;}
+  .btn-primary:hover{box-shadow:0 0 22px rgba(0,229,160,.3);transform:translateY(-1px);}
+  .btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--border);border-radius:11px;padding:.75rem 1.5rem;font-family:'DM Sans',sans-serif;font-size:.85rem;cursor:none;transition:all .2s;}
+  .btn-ghost:hover{border-color:rgba(0,229,160,.2);color:var(--text);}
+  .toast{position:fixed;bottom:2rem;left:50%;transform:translateX(-50%) translateY(100px);background:var(--card);border:1px solid var(--border);border-radius:12px;padding:.7rem 1.2rem;display:flex;align-items:center;gap:.6rem;font-size:.82rem;z-index:600;transition:transform .4s cubic-bezier(.34,1.56,.64,1);box-shadow:0 8px 32px rgba(0,0,0,.4);}
+  .toast.show{transform:translateX(-50%) translateY(0);}
+  .fi{animation:fadeIn .45s ease both;}@keyframes fadeIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+  .fi1{animation-delay:.05s}.fi2{animation-delay:.1s}.fi3{animation-delay:.15s}.fi4{animation-delay:.2s}
+  @media(max-width:820px){.sidebar{display:none;}}
+
+
+  .contact-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:1.1rem 1.25rem;display:flex;align-items:center;gap:.9rem;cursor:none;transition:all .2s;}
+  .contact-card:hover{border-color:rgba(0,229,160,.25);transform:translateY(-2px);}
+  .cc-av{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0;}
+  .av-g{background:rgba(0,229,160,.1);border:1.5px solid rgba(0,229,160,.25);}
+  .av-b{background:rgba(0,128,255,.1);border:1.5px solid rgba(0,128,255,.25);}
+  .av-p{background:rgba(124,58,237,.1);border:1.5px solid rgba(124,58,237,.25);}
+  .cc-name{font-family:'Syne',sans-serif;font-weight:700;font-size:.92rem;}
+  .cc-rel{font-size:.7rem;color:var(--muted);}
+  .cc-phone{font-size:.72rem;color:var(--muted);margin-top:1px;}
+  .cc-actions{margin-left:auto;display:flex;gap:.5rem;}
+  .cc-btn{width:32px;height:32px;background:var(--surface);border:1px solid var(--border);border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:.82rem;cursor:none;transition:all .2s;}
+  .cc-btn:hover{border-color:rgba(0,229,160,.3);}
+  .cc-status-pill{font-size:.62rem;font-weight:700;padding:3px 9px;border-radius:50px;}
+  .cs-on{background:rgba(0,229,160,.1);color:var(--accent);}
+  .cs-off{background:rgba(107,120,150,.12);color:var(--muted);}
+  .add-contact-card{background:transparent;border:2px dashed var(--border);border-radius:16px;padding:1.5rem;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.5rem;cursor:none;transition:all .2s;text-align:center;}
+  .add-contact-card:hover{border-color:rgba(0,229,160,.35);background:rgba(0,229,160,.02);}
+  .contact-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1rem;}
+  .modal-overlay{position:fixed;inset:0;z-index:500;background:rgba(7,9,15,.88);display:flex;align-items:center;justify-content:center;backdrop-filter:blur(8px);opacity:0;pointer-events:none;transition:opacity .3s;}
+  .modal-overlay.show{opacity:1;pointer-events:all;}
+  .modal-box{background:var(--card);border:1px solid var(--border);border-radius:22px;padding:2rem;max-width:420px;width:90%;transform:scale(.9);transition:transform .35s cubic-bezier(.34,1.56,.64,1);}
+  .modal-overlay.show .modal-box{transform:scale(1);}
+  .mb-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;}
+  .mb-title{font-family:'Syne',sans-serif;font-weight:800;font-size:1.1rem;}
+  .mb-close{width:28px;height:28px;background:var(--surface);border:1px solid var(--border);border-radius:7px;cursor:none;font-size:.8rem;display:flex;align-items:center;justify-content:center;color:var(--muted);transition:all .2s;}
+  .mb-close:hover{border-color:rgba(255,71,87,.3);color:var(--danger);}
+  .m-actions{display:flex;gap:.75rem;margin-top:1.25rem;}
+  .mbtn{flex:1;padding:.7rem;border-radius:11px;font-family:'Syne',sans-serif;font-weight:700;font-size:.82rem;cursor:none;transition:all .2s;}
+  .mbtn-p{background:var(--accent);color:#000;border:none;} .mbtn-p:hover{box-shadow:0 0 20px rgba(0,229,160,.3);}
+  .mbtn-g{background:transparent;color:var(--muted);border:1px solid var(--border);} .mbtn-g:hover{border-color:rgba(0,229,160,.2);color:var(--text);}
+
+</style>
+</head>
+<body>
+<div class="cursor" id="cursor"></div>
+<div class="cursor-ring" id="cursorRing"></div>
+<div class="sidebar"><div class="sb-logo"><a href="saferoute-landing.html">Safe<span>Route</span></a></div><div class="sb-user"><div class="sb-av">👩🏽</div><div><div class="sb-name">Jody-Ann T.</div><div class="sb-email">jodyann@email.com</div></div></div><nav class="sb-nav"><div class="ni" onclick="go('saferoute-passenger-dashboard.html')">📊 Dashboard </div><div class="ni" onclick="go('saferoute-booking.html')">🚕 Book a Ride </div><div class="ni" onclick="go('saferoute-tracking.html')">🗺 Track My Ride <span class="nib">Live</span></div><div class="ng">Main</div><div class="ni" onclick="go('saferoute-trip-history.html')">📜 Trip History </div><div class="ng">Safety</div><div class="ni active" onclick="void(0)">👥 Trusted Contacts </div><div class="ni" onclick="go('saferoute-privacy.html')">🔒 Privacy Settings </div><div class="ni" onclick="go('saferoute-notifications.html')">🔔 Notifications <span class="nib w">3</span></div><div class="ng">Account</div><div class="ni" onclick="go('saferoute-profile.html')">👤 My Profile </div><div class="ni" onclick="go('saferoute-payments.html')">💳 Payment Methods </div><div class="ni" onclick="go('saferoute-reviews.html')">⭐ Reviews & Ratings </div><div class="ni" onclick="go('saferoute-settings.html')">⚙️ Settings </div></nav><div class="sb-bot"><button class="book-btn" onclick="go('saferoute-booking.html')">🚕 Book a New Ride</button><button class="so-btn" onclick="signOut()">Sign Out</button></div></div>
+<div class="main">
+  <div class="topbar">
+    <div class="tb-title">Trusted Contacts</div>
+    <div class="tb-r">
+      <span class="tb-clk" id="clk">--:--</span>
+      <button class="tb-btn primary" onclick="document.getElementById('addModal').classList.add('show')">+ Add Contact</button>
+    </div>
+  </div>
+  <div class="content">
+    
+<div class="fi fi1" style="display:flex;align-items:center;justify-content:space-between;">
+  <div>
+    <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:1.1rem;">Trusted Contacts</div>
+    <div style="font-size:.78rem;color:var(--muted);">People who can monitor your rides</div>
+  </div>
+  <button class="btn-primary" style="padding:.55rem 1.1rem;font-size:.82rem;" onclick="document.getElementById('addModal').classList.add('show')">+ Add Contact</button>
+</div>
+<div style="background:rgba(0,229,160,.05);border:1px solid rgba(0,229,160,.18);border-radius:14px;padding:1rem 1.25rem;display:flex;gap:.85rem;align-items:flex-start;" class="fi fi1">
+  <span style="font-size:1.2rem;flex-shrink:0;">🛡</span>
+  <div><div style="font-size:.85rem;font-weight:600;margin-bottom:3px;">How trusted contacts work</div><div style="font-size:.77rem;color:var(--muted);line-height:1.55;">When you enable location sharing on a ride, your trusted contacts receive a secure private link to monitor your journey in real time. They are notified automatically when you arrive safely, and all access ends when the ride completes.</div></div>
+</div>
+<div class="contact-grid fi fi2">
+  <div class="contact-card">
+    <div class="cc-av av-g">👩</div>
+    <div style="flex:1;">
+      <div class="cc-name">Mom</div>
+      <div class="cc-rel">Family</div>
+      <div class="cc-phone">+1 876 555-0101</div>
+    </div>
+    <span class="cc-status-pill cs-on">● Watching</span>
+    <div class="cc-actions">
+      <div class="cc-btn" onclick="showToast('📋','Tracking link copied for Mom.')">🔗</div>
+      <div class="cc-btn" onclick="showToast('✏️','Edit contact...')">✏️</div>
+      <div class="cc-btn" onclick="showToast('🗑','Remove contact?')" style="color:var(--danger);">🗑</div>
+    </div>
+  </div>
+  <div class="contact-card">
+    <div class="cc-av av-b">👫</div>
+    <div style="flex:1;">
+      <div class="cc-name">Best Friend</div>
+      <div class="cc-rel">Friend</div>
+      <div class="cc-phone">+1 876 555-0188</div>
+    </div>
+    <span class="cc-status-pill cs-off">Offline</span>
+    <div class="cc-actions">
+      <div class="cc-btn" onclick="showToast('📋','Tracking link copied.')">🔗</div>
+      <div class="cc-btn" onclick="showToast('✏️','Edit contact...')">✏️</div>
+      <div class="cc-btn" onclick="showToast('🗑','Remove contact?')" style="color:var(--danger);">🗑</div>
+    </div>
+  </div>
+  <div class="contact-card">
+    <div class="cc-av av-p">👨</div>
+    <div style="flex:1;">
+      <div class="cc-name">Dad</div>
+      <div class="cc-rel">Family</div>
+      <div class="cc-phone">+1 876 555-0144</div>
+    </div>
+    <span class="cc-status-pill cs-off">Offline</span>
+    <div class="cc-actions">
+      <div class="cc-btn" onclick="showToast('📋','Tracking link copied for Dad.')">🔗</div>
+      <div class="cc-btn" onclick="showToast('✏️','Edit contact...')">✏️</div>
+      <div class="cc-btn" onclick="showToast('🗑','Remove contact?')" style="color:var(--danger);">🗑</div>
+    </div>
+  </div>
+  <div class="add-contact-card" onclick="document.getElementById('addModal').classList.add('show')">
+    <span style="font-size:1.8rem;">➕</span>
+    <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:.88rem;">Add New Contact</div>
+    <div style="font-size:.73rem;color:var(--muted);">Up to 5 trusted contacts</div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="addModal">
+  <div class="modal-box">
+    <div class="mb-head"><span class="mb-title">Add Trusted Contact</span><button class="mb-close" onclick="document.getElementById('addModal').classList.remove('show')">✕</button></div>
+    <div class="field"><label>Full Name</label><input type="text" placeholder="e.g. Aunty Kim"/></div>
+    <div class="field"><label>Relationship</label><select><option>Family</option><option>Friend</option><option>Partner</option><option>Colleague</option><option>Other</option></select></div>
+    <div class="field"><label>Phone Number</label><input type="tel" placeholder="+1 876 555-0000"/></div>
+    <div class="field"><label>Email (optional)</label><input type="email" placeholder="contact@email.com"/></div>
+    <div class="m-actions">
+      <button class="mbtn mbtn-p" onclick="showToast('✅','Contact added successfully!');document.getElementById('addModal').classList.remove('show')">Add Contact</button>
+      <button class="mbtn mbtn-g" onclick="document.getElementById('addModal').classList.remove('show')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+  </div>
+</div>
+<div class="toast" id="toastEl"><span id="tIcon"></span><span id="tText"></span></div>
+<script>
+
+const cur=document.getElementById('cursor'),ring=document.getElementById('cursorRing');
+document.addEventListener('mousemove',e=>{cur.style.left=e.clientX+'px';cur.style.top=e.clientY+'px';setTimeout(()=>{ring.style.left=e.clientX+'px';ring.style.top=e.clientY+'px';},80);});
+document.querySelectorAll('a,button,.ni,.tog,.card-hover').forEach(el=>{el.addEventListener('mouseenter',()=>cur.style.transform='translate(-50%,-50%) scale(1.8)');el.addEventListener('mouseleave',()=>cur.style.transform='translate(-50%,-50%) scale(1)');});
+function tick(){const el=document.getElementById('clk');if(el)el.textContent=new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});}tick();setInterval(tick,1000);
+function go(p){window.location.href=p;}
+function signOut(){showToast('👋','Signing out...');setTimeout(()=>go('saferoute-auth.html'),1200);}
+let tt;function showToast(i,t){const el=document.getElementById('toastEl');document.getElementById('tIcon').textContent=i;document.getElementById('tText').textContent=t;el.classList.add('show');clearTimeout(tt);tt=setTimeout(()=>el.classList.remove('show'),2800);}
+
+</script>
+</body>
+</html>

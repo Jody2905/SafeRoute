@@ -1,0 +1,991 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>SafeRoute – Privacy-First GPS Taxi</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg: #07090f;
+    --surface: #0d1117;
+    --card: #111620;
+    --border: #1e2535;
+    --accent: #00e5a0;
+    --accent2: #0080ff;
+    --accent3: #7c3aed;
+    --text: #e8edf5;
+    --muted: #6b7896;
+    --danger: #ff4757;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    overflow-x: hidden;
+    cursor: none;
+  }
+
+  /* Custom cursor */
+  .cursor {
+    width: 12px; height: 12px;
+    background: var(--accent);
+    border-radius: 50%;
+    position: fixed;
+    top: 0; left: 0;
+    pointer-events: none;
+    z-index: 9999;
+    transition: transform 0.15s ease, opacity 0.15s ease;
+    transform: translate(-50%, -50%);
+  }
+  .cursor-ring {
+    width: 36px; height: 36px;
+    border: 1.5px solid rgba(0,229,160,0.4);
+    border-radius: 50%;
+    position: fixed;
+    top: 0; left: 0;
+    pointer-events: none;
+    z-index: 9998;
+    transition: transform 0.35s cubic-bezier(.25,.46,.45,.94);
+    transform: translate(-50%, -50%);
+  }
+
+  /* ───────── NAV ───────── */
+  nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 1.25rem 3rem;
+    backdrop-filter: blur(20px);
+    background: rgba(7,9,15,0.75);
+    border-bottom: 1px solid var(--border);
+  }
+  .logo {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 1.4rem;
+    letter-spacing: -0.03em;
+    color: var(--text);
+    text-decoration: none;
+  }
+  .logo span { color: var(--accent); }
+  .nav-links { display: flex; gap: 2.5rem; list-style: none; }
+  .nav-links a {
+    color: var(--muted); text-decoration: none;
+    font-size: 0.875rem; font-weight: 500;
+    transition: color 0.2s;
+    cursor: none;
+  }
+  .nav-links a:hover { color: var(--text); }
+  .nav-cta {
+    background: var(--accent);
+    color: #000 !important;
+    padding: 0.5rem 1.25rem;
+    border-radius: 50px;
+    font-weight: 600 !important;
+    font-size: 0.85rem !important;
+    transition: box-shadow 0.2s, transform 0.2s !important;
+  }
+  .nav-cta:hover {
+    box-shadow: 0 0 24px rgba(0,229,160,0.4);
+    transform: translateY(-1px);
+    color: #000 !important;
+  }
+
+  /* ───────── HERO ───────── */
+  .hero {
+    min-height: 100vh;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    text-align: center;
+    padding: 8rem 2rem 4rem;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* Animated background grid */
+  .hero::before {
+    content: '';
+    position: absolute; inset: 0;
+    background-image:
+      linear-gradient(rgba(30,37,53,0.6) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(30,37,53,0.6) 1px, transparent 1px);
+    background-size: 60px 60px;
+    animation: gridMove 20s linear infinite;
+    opacity: 0.5;
+  }
+  @keyframes gridMove {
+    0% { background-position: 0 0; }
+    100% { background-position: 60px 60px; }
+  }
+
+  /* Glow orbs */
+  .orb {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(80px);
+    pointer-events: none;
+  }
+  .orb-1 {
+    width: 500px; height: 500px;
+    background: radial-gradient(circle, rgba(0,229,160,0.12), transparent 70%);
+    top: -100px; left: -100px;
+    animation: float1 8s ease-in-out infinite;
+  }
+  .orb-2 {
+    width: 400px; height: 400px;
+    background: radial-gradient(circle, rgba(0,128,255,0.1), transparent 70%);
+    bottom: 0; right: -50px;
+    animation: float2 10s ease-in-out infinite;
+  }
+  .orb-3 {
+    width: 300px; height: 300px;
+    background: radial-gradient(circle, rgba(124,58,237,0.08), transparent 70%);
+    top: 40%; left: 50%;
+    animation: float3 12s ease-in-out infinite;
+  }
+  @keyframes float1 { 0%,100%{transform:translate(0,0)} 50%{transform:translate(40px,30px)} }
+  @keyframes float2 { 0%,100%{transform:translate(0,0)} 50%{transform:translate(-30px,-20px)} }
+  @keyframes float3 { 0%,100%{transform:translate(-50%,-50%)} 50%{transform:translate(-50%,-60%)} }
+
+  .hero-content { position: relative; z-index: 2; max-width: 820px; }
+
+  .hero-badge {
+    display: inline-flex; align-items: center; gap: 0.5rem;
+    background: rgba(0,229,160,0.08);
+    border: 1px solid rgba(0,229,160,0.2);
+    color: var(--accent);
+    padding: 0.4rem 1rem;
+    border-radius: 50px;
+    font-size: 0.78rem;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin-bottom: 2rem;
+    animation: fadeUp 0.8s ease both;
+  }
+  .badge-dot {
+    width: 6px; height: 6px;
+    background: var(--accent);
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(1.4)} }
+
+  h1 {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: clamp(3rem, 7vw, 5.5rem);
+    line-height: 1.0;
+    letter-spacing: -0.04em;
+    margin-bottom: 1.5rem;
+    animation: fadeUp 0.8s 0.15s ease both;
+  }
+  h1 .line-green { color: var(--accent); }
+  h1 .line-dim { color: var(--muted); }
+
+  .hero-sub {
+    font-size: 1.15rem;
+    color: var(--muted);
+    font-weight: 300;
+    line-height: 1.7;
+    max-width: 540px;
+    margin: 0 auto 2.5rem;
+    animation: fadeUp 0.8s 0.3s ease both;
+  }
+
+  .hero-btns {
+    display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;
+    animation: fadeUp 0.8s 0.45s ease both;
+  }
+  .btn-primary {
+    background: var(--accent);
+    color: #000;
+    padding: 0.85rem 2rem;
+    border-radius: 50px;
+    font-weight: 600;
+    font-size: 0.95rem;
+    text-decoration: none;
+    transition: box-shadow 0.2s, transform 0.2s;
+    cursor: none;
+    display: inline-flex; align-items: center; gap: 0.5rem;
+  }
+  .btn-primary:hover {
+    box-shadow: 0 0 40px rgba(0,229,160,0.35);
+    transform: translateY(-2px);
+  }
+  .btn-ghost {
+    background: transparent;
+    color: var(--text);
+    padding: 0.85rem 2rem;
+    border-radius: 50px;
+    border: 1px solid var(--border);
+    font-weight: 500;
+    font-size: 0.95rem;
+    text-decoration: none;
+    transition: border-color 0.2s, background 0.2s;
+    cursor: none;
+    display: inline-flex; align-items: center; gap: 0.5rem;
+  }
+  .btn-ghost:hover { border-color: var(--accent); background: rgba(0,229,160,0.04); }
+
+  /* Animated stats bar */
+  .hero-stats {
+    display: flex; gap: 3rem; justify-content: center;
+    margin-top: 4rem;
+    padding-top: 3rem;
+    border-top: 1px solid var(--border);
+    animation: fadeUp 0.8s 0.6s ease both;
+  }
+  .stat-item { text-align: center; }
+  .stat-num {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 2rem;
+    color: var(--text);
+    display: block;
+  }
+  .stat-num .accent { color: var(--accent); }
+  .stat-label { font-size: 0.78rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+
+  @keyframes fadeUp {
+    from { opacity:0; transform:translateY(24px); }
+    to   { opacity:1; transform:translateY(0); }
+  }
+
+  /* ───────── MOCK PHONE ───────── */
+  .phone-showcase {
+    padding: 6rem 2rem;
+    display: flex; justify-content: center;
+    position: relative; overflow: hidden;
+  }
+  .phone-showcase::before {
+    content: '';
+    position: absolute;
+    width: 600px; height: 600px;
+    background: radial-gradient(circle, rgba(0,229,160,0.06), transparent 70%);
+    top: 50%; left: 50%; transform: translate(-50%,-50%);
+    border-radius: 50%;
+  }
+  .phone-frame {
+    width: 280px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 38px;
+    padding: 1.5rem;
+    position: relative;
+    box-shadow: 0 40px 100px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.04);
+    z-index: 2;
+    animation: phoneFloat 6s ease-in-out infinite;
+  }
+  @keyframes phoneFloat { 0%,100%{transform:translateY(0) rotate(-1deg)} 50%{transform:translateY(-12px) rotate(1deg)} }
+  .phone-notch {
+    width: 80px; height: 22px;
+    background: var(--bg);
+    border-radius: 0 0 14px 14px;
+    margin: 0 auto 1rem;
+  }
+  .phone-map {
+    width: 100%;
+    height: 200px;
+    background: linear-gradient(145deg, #0d1f1a 0%, #0a1a2e 100%);
+    border-radius: 16px;
+    position: relative;
+    overflow: hidden;
+    margin-bottom: 1rem;
+  }
+  /* Animated map dots */
+  .map-grid {
+    position: absolute; inset: 0;
+    background-image:
+      linear-gradient(rgba(0,229,160,0.07) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,229,160,0.07) 1px, transparent 1px);
+    background-size: 24px 24px;
+  }
+  .route-line {
+    position: absolute;
+    bottom: 40px; left: 20px; right: 20px;
+    height: 2px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    border-radius: 2px;
+  }
+  .route-line::before {
+    content: '';
+    position: absolute;
+    width: 10px; height: 10px;
+    background: var(--accent);
+    border-radius: 50%;
+    top: -4px; left: -2px;
+    box-shadow: 0 0 12px var(--accent);
+    animation: moveDot 3s ease-in-out infinite;
+  }
+  @keyframes moveDot {
+    0%,100%{left:-2px} 50%{left:calc(100% - 8px)}
+  }
+  .route-dest {
+    position: absolute;
+    width: 10px; height: 10px;
+    background: var(--danger);
+    border-radius: 50%;
+    bottom: 36px; right: 18px;
+    box-shadow: 0 0 12px var(--danger);
+  }
+  .phone-status {
+    background: var(--surface);
+    border-radius: 12px;
+    padding: 0.75rem;
+    margin-bottom: 0.75rem;
+    display: flex; align-items: center; gap: 0.75rem;
+  }
+  .status-icon {
+    width: 32px; height: 32px;
+    background: rgba(0,229,160,0.12);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.9rem;
+    flex-shrink: 0;
+  }
+  .status-label { font-size: 0.7rem; color: var(--muted); }
+  .status-value { font-size: 0.82rem; font-weight: 600; color: var(--text); }
+  .live-badge {
+    margin-left: auto;
+    background: rgba(0,229,160,0.15);
+    border: 1px solid rgba(0,229,160,0.3);
+    color: var(--accent);
+    font-size: 0.6rem;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 50px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    animation: livePulse 2s infinite;
+  }
+  @keyframes livePulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
+  .phone-share {
+    display: flex; gap: 0.5rem;
+  }
+  .share-chip {
+    flex: 1;
+    background: var(--surface);
+    border-radius: 10px;
+    padding: 0.6rem;
+    text-align: center;
+    font-size: 0.65rem;
+    color: var(--muted);
+  }
+  .share-chip .chip-icon { font-size: 1rem; display: block; margin-bottom: 2px; }
+  .share-chip.active { background: rgba(0,229,160,0.08); border: 1px solid rgba(0,229,160,0.2); color: var(--accent); }
+
+  /* Floating info cards */
+  .float-card {
+    position: absolute;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 0.75rem 1rem;
+    z-index: 3;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  }
+  .float-card-left {
+    left: -140px; top: 30%;
+    animation: floatCard1 7s ease-in-out infinite;
+  }
+  .float-card-right {
+    right: -140px; top: 55%;
+    animation: floatCard2 8s ease-in-out infinite;
+  }
+  @keyframes floatCard1 { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }
+  @keyframes floatCard2 { 0%,100%{transform:translateY(0)} 50%{transform:translateY(8px)} }
+  .fc-label { font-size: 0.65rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 4px; }
+  .fc-value { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 1rem; color: var(--text); }
+  .fc-sub { font-size: 0.7rem; color: var(--accent); }
+
+  /* ───────── HOW IT WORKS ───────── */
+  section { padding: 6rem 2rem; max-width: 1100px; margin: 0 auto; }
+  .section-tag {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--accent);
+    margin-bottom: 0.75rem;
+  }
+  .section-title {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: clamp(2rem, 4vw, 3rem);
+    letter-spacing: -0.03em;
+    line-height: 1.1;
+    margin-bottom: 1rem;
+  }
+  .section-sub {
+    color: var(--muted);
+    font-size: 1rem;
+    font-weight: 300;
+    max-width: 500px;
+    line-height: 1.7;
+  }
+
+  .steps-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1.5rem;
+    margin-top: 3rem;
+  }
+  .step-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 2rem;
+    position: relative;
+    transition: border-color 0.2s, transform 0.2s;
+    overflow: hidden;
+  }
+  .step-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--accent), transparent);
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+  .step-card:hover { border-color: rgba(0,229,160,0.3); transform: translateY(-4px); }
+  .step-card:hover::before { opacity: 1; }
+  .step-num {
+    font-family: 'Syne', sans-serif;
+    font-size: 3.5rem;
+    font-weight: 800;
+    color: rgba(0,229,160,0.08);
+    line-height: 1;
+    margin-bottom: 0.5rem;
+  }
+  .step-icon {
+    font-size: 1.8rem;
+    margin-bottom: 1rem;
+  }
+  .step-card h3 {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 1.05rem;
+    margin-bottom: 0.5rem;
+    letter-spacing: -0.02em;
+  }
+  .step-card p { font-size: 0.875rem; color: var(--muted); line-height: 1.6; }
+
+  /* ───────── FEATURES ───────── */
+  .features-layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    margin-top: 3rem;
+  }
+  .feature-big {
+    grid-row: span 2;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 24px;
+    padding: 2.5rem;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.2s;
+  }
+  .feature-big:hover { border-color: rgba(0,128,255,0.3); }
+  .feature-small {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 24px;
+    padding: 2rem;
+    transition: border-color 0.2s, transform 0.2s;
+  }
+  .feature-small:hover { border-color: rgba(0,229,160,0.25); transform: translateY(-2px); }
+  .feat-icon {
+    width: 44px; height: 44px;
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.2rem;
+    margin-bottom: 1.25rem;
+  }
+  .feat-icon.green { background: rgba(0,229,160,0.1); }
+  .feat-icon.blue  { background: rgba(0,128,255,0.1); }
+  .feat-icon.purple{ background: rgba(124,58,237,0.1); }
+  .feat-icon.red   { background: rgba(255,71,87,0.12); }
+  .feature-big h3, .feature-small h3 {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 1.1rem;
+    letter-spacing: -0.02em;
+    margin-bottom: 0.5rem;
+  }
+  .feature-big p, .feature-small p { font-size: 0.875rem; color: var(--muted); line-height: 1.65; }
+
+  /* Access level visual */
+  .access-rows { margin-top: 1.5rem; display: flex; flex-direction: column; gap: 0.75rem; }
+  .access-row {
+    display: flex; align-items: center; gap: 0.75rem;
+    background: var(--surface); border-radius: 10px; padding: 0.7rem 0.9rem;
+  }
+  .access-avatar {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.75rem; flex-shrink: 0;
+  }
+  .av-passenger { background: rgba(0,229,160,0.15); color: var(--accent); }
+  .av-driver    { background: rgba(0,128,255,0.15); color: var(--accent2); }
+  .av-contact   { background: rgba(124,58,237,0.15); color: #a78bfa; }
+  .av-public    { background: rgba(107,120,150,0.2); color: var(--muted); }
+  .access-name { font-size: 0.8rem; font-weight: 500; flex: 1; }
+  .access-pill {
+    font-size: 0.65rem; font-weight: 600; padding: 3px 10px; border-radius: 50px;
+    text-transform: uppercase; letter-spacing: 0.04em;
+  }
+  .pill-full    { background: rgba(0,229,160,0.12); color: var(--accent); }
+  .pill-partial { background: rgba(124,58,237,0.12); color: #a78bfa; }
+  .pill-direction{ background: rgba(107,120,150,0.15); color: var(--muted); }
+
+  /* ───────── ROLES ───────── */
+  .roles-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 1.25rem;
+    margin-top: 3rem;
+  }
+  .role-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 1.75rem;
+    text-align: center;
+    transition: all 0.2s;
+  }
+  .role-card:hover { border-color: rgba(0,229,160,0.3); transform: translateY(-4px); }
+  .role-emoji { font-size: 2rem; margin-bottom: 0.75rem; display: block; }
+  .role-card h3 { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.95rem; margin-bottom: 0.4rem; }
+  .role-card p { font-size: 0.78rem; color: var(--muted); line-height: 1.5; }
+
+  /* ───────── SECURITY ───────── */
+  .security-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 1.25rem;
+    margin-top: 3rem;
+  }
+  .sec-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 1.75rem;
+    display: flex; gap: 1rem; align-items: flex-start;
+    transition: border-color 0.2s;
+  }
+  .sec-card:hover { border-color: rgba(0,229,160,0.25); }
+  .sec-icon { font-size: 1.5rem; flex-shrink: 0; margin-top: 2px; }
+  .sec-card h4 { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.9rem; margin-bottom: 0.3rem; }
+  .sec-card p { font-size: 0.8rem; color: var(--muted); line-height: 1.55; }
+
+  /* ───────── CTA ───────── */
+  .cta-section {
+    padding: 6rem 2rem;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .cta-section::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse 80% 60% at 50% 50%, rgba(0,229,160,0.06), transparent);
+  }
+  .cta-inner { position: relative; z-index: 2; }
+  .cta-section h2 {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: clamp(2rem, 5vw, 3.5rem);
+    letter-spacing: -0.03em;
+    margin-bottom: 1rem;
+  }
+  .cta-section p { color: var(--muted); font-size: 1rem; margin-bottom: 2rem; }
+  .cta-btns { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
+
+  /* ───────── FOOTER ───────── */
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 2rem 3rem;
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 1rem;
+  }
+  .footer-logo { font-family: 'Syne', sans-serif; font-weight: 800; color: var(--text); font-size: 1.1rem; }
+  .footer-logo span { color: var(--accent); }
+  footer p { font-size: 0.8rem; color: var(--muted); }
+
+  /* ───────── SCROLL REVEAL ───────── */
+  .reveal { opacity: 0; transform: translateY(30px); transition: all 0.7s cubic-bezier(.25,.46,.45,.94); }
+  .reveal.visible { opacity: 1; transform: translateY(0); }
+
+  /* ───────── DIVIDER ───────── */
+  .section-divider {
+    width: 100%; height: 1px;
+    background: linear-gradient(90deg, transparent, var(--border), transparent);
+    max-width: 1100px; margin: 0 auto;
+  }
+
+  @media (max-width: 768px) {
+    nav { padding: 1rem 1.5rem; }
+    .nav-links { display: none; }
+    .features-layout { grid-template-columns: 1fr; }
+    .feature-big { grid-row: span 1; }
+    .float-card { display: none; }
+    .hero-stats { gap: 1.5rem; flex-wrap: wrap; }
+    footer { flex-direction: column; text-align: center; }
+  }
+</style>
+</head>
+<body>
+
+<div class="cursor" id="cursor"></div>
+<div class="cursor-ring" id="cursorRing"></div>
+
+<!-- NAV -->
+<nav>
+  <a href="#" class="logo">Safe<span>Route</span></a>
+  <ul class="nav-links">
+    <li><a href="#how">How It Works</a></li>
+    <li><a href="#features">Features</a></li>
+    <li><a href="#roles">Roles</a></li>
+    <li><a href="#security">Security</a></li>
+    <li><a href="saferoute-auth.html" class="nav-cta">Get Started</a></li>
+  </ul>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+  <div class="orb orb-3"></div>
+  <div class="hero-content">
+    <div class="hero-badge">
+      <span class="badge-dot"></span>
+      Privacy-First GPS System
+    </div>
+    <h1>
+      Your Ride.<br>
+      <span class="line-green">Your Safety.</span><br>
+      <span class="line-dim">Your Control.</span>
+    </h1>
+    <p class="hero-sub">
+      SafeRoute delivers real-time GPS taxi booking where only you decide who sees your location — with trusted contact sharing, group ride coordination, and automatic arrival confirmation.
+    </p>
+    <div class="hero-btns">
+      <a href="saferoute-auth.html" class="btn-primary">
+        <span>🚕</span> Get Started Free
+      </a>
+      <a href="#how" class="btn-ghost">
+        <span>🗺</span> See How It Works
+      </a>
+    </div>
+    <div class="hero-stats">
+      <div class="stat-item">
+        <span class="stat-num">5<span class="accent">+</span></span>
+        <span class="stat-label">User Roles</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-num">0</span>
+        <span class="stat-label">Public GPS Leaks</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-num">100<span class="accent">%</span></span>
+        <span class="stat-label">Consent-Based</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-num">3<span class="accent">s</span></span>
+        <span class="stat-label">GPS Update Rate</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PHONE SHOWCASE -->
+<div class="phone-showcase">
+  <div class="phone-frame">
+    <div class="phone-notch"></div>
+    <div class="phone-map">
+      <div class="map-grid"></div>
+      <div class="route-line"></div>
+      <div class="route-dest"></div>
+    </div>
+    <div class="phone-status">
+      <div class="status-icon">🚕</div>
+      <div>
+        <div class="status-label">Current Ride</div>
+        <div class="status-value">En Route to Downtown</div>
+      </div>
+      <span class="live-badge">Live</span>
+    </div>
+    <div class="phone-share">
+      <div class="share-chip active"><span class="chip-icon">🔒</span>Private</div>
+      <div class="share-chip active"><span class="chip-icon">👤</span>Trusted</div>
+      <div class="share-chip"><span class="chip-icon">🌐</span>Public</div>
+    </div>
+    <!-- Floating cards -->
+    <div class="float-card float-card-left">
+      <div class="fc-label">ETA</div>
+      <div class="fc-value">8 min</div>
+      <div class="fc-sub">↑ On Track</div>
+    </div>
+    <div class="float-card float-card-right">
+      <div class="fc-label">Trusted Contact</div>
+      <div class="fc-value">Mom 👁</div>
+      <div class="fc-sub">Watching your ride</div>
+    </div>
+  </div>
+</div>
+
+<div class="section-divider"></div>
+
+<!-- HOW IT WORKS -->
+<section id="how" class="reveal">
+  <div class="section-tag">Process</div>
+  <h2 class="section-title">How SafeRoute Works</h2>
+  <p class="section-sub">Four simple steps from booking to safe arrival — with privacy controls at every stage.</p>
+  <div class="steps-grid">
+    <div class="step-card">
+      <div class="step-num">01</div>
+      <div class="step-icon">📍</div>
+      <h3>Book Your Ride</h3>
+      <p>Enter your pickup and destination. The system securely assigns an available driver and notifies them instantly.</p>
+    </div>
+    <div class="step-card">
+      <div class="step-num">02</div>
+      <div class="step-icon">🔗</div>
+      <h3>Share Securely</h3>
+      <p>Generate a private time-limited tracking link. Share it with a trusted contact so they can monitor your journey.</p>
+    </div>
+    <div class="step-card">
+      <div class="step-num">03</div>
+      <div class="step-icon">🚗</div>
+      <h3>Live GPS Tracking</h3>
+      <p>Only you, your driver, and your trusted contacts see your real-time GPS. Others see direction only — never exact coordinates.</p>
+    </div>
+    <div class="step-card">
+      <div class="step-num">04</div>
+      <div class="step-icon">✅</div>
+      <h3>Safe Arrival</h3>
+      <p>When you arrive, tracking automatically stops. Trusted contacts receive a "safely arrived" notification. No lingering data.</p>
+    </div>
+  </div>
+</section>
+
+<div class="section-divider"></div>
+
+<!-- FEATURES -->
+<section id="features" class="reveal">
+  <div class="section-tag">Features</div>
+  <h2 class="section-title">Built Around Privacy & Safety</h2>
+  <p class="section-sub">Every feature is designed to put you in control of your own data.</p>
+  <div class="features-layout">
+
+    <div class="feature-big">
+      <div class="feat-icon blue">🛡</div>
+      <h3>Role-Based GPS Visibility</h3>
+      <p>Not everyone sees the same thing. Access to live location data is controlled by role, consent, and ride status — never open by default.</p>
+      <div class="access-rows">
+        <div class="access-row">
+          <div class="access-avatar av-passenger">🧑</div>
+          <span class="access-name">Passenger</span>
+          <span class="access-pill pill-full">Full GPS</span>
+        </div>
+        <div class="access-row">
+          <div class="access-avatar av-driver">🚗</div>
+          <span class="access-name">Driver</span>
+          <span class="access-pill pill-full">Full GPS</span>
+        </div>
+        <div class="access-row">
+          <div class="access-avatar av-contact">💙</div>
+          <span class="access-name">Trusted Contact</span>
+          <span class="access-pill pill-partial">View Only</span>
+        </div>
+        <div class="access-row">
+          <div class="access-avatar av-public">👁</div>
+          <span class="access-name">Public Viewer</span>
+          <span class="access-pill pill-direction">Direction Only</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="feature-small">
+      <div class="feat-icon green">🔗</div>
+      <h3>Private Tracking Links</h3>
+      <p>Share time-limited, token-based tracking URLs with specific people. Links expire automatically when the ride ends.</p>
+    </div>
+
+    <div class="feature-small">
+      <div class="feat-icon purple">🚌</div>
+      <h3>Group Ride Pickup</h3>
+      <p>Enable Open Route mode so others can request pickup along your route — without ever seeing your exact GPS position.</p>
+    </div>
+
+    <div class="feature-small">
+      <div class="feat-icon green">🔔</div>
+      <h3>Arrival Notifications</h3>
+      <p>Trusted contacts are automatically notified the moment you safely reach your destination. No manual updates needed.</p>
+    </div>
+
+    <div class="feature-small">
+      <div class="feat-icon red">🛑</div>
+      <h3>Auto Tracking Termination</h3>
+      <p>GPS tracking stops the instant your ride completes. No residual tracking. No stale data. Full privacy restored.</p>
+    </div>
+
+  </div>
+</section>
+
+<div class="section-divider"></div>
+
+<!-- ROLES -->
+<section id="roles" class="reveal">
+  <div class="section-tag">System Users</div>
+  <h2 class="section-title">Everyone Has Their Role</h2>
+  <p class="section-sub">SafeRoute is designed around a clear role-based access system with distinct privileges for each user type.</p>
+  <div class="roles-grid">
+    <div class="role-card">
+      <span class="role-emoji">🧑‍💼</span>
+      <h3>Primary Passenger</h3>
+      <p>Books the taxi, controls sharing settings, and holds full GPS access throughout the journey.</p>
+    </div>
+    <div class="role-card">
+      <span class="role-emoji">🚕</span>
+      <h3>Taxi Driver</h3>
+      <p>Sees passenger pickup and drop-off locations. Manages ride status from start to completion.</p>
+    </div>
+    <div class="role-card">
+      <span class="role-emoji">💙</span>
+      <h3>Trusted Contact</h3>
+      <p>Receives a private link to monitor the trip. Gets notified when the passenger safely arrives.</p>
+    </div>
+    <div class="role-card">
+      <span class="role-emoji">🙋</span>
+      <h3>Pickup Passenger</h3>
+      <p>Requests a ride along the route. Gains GPS access only after confirming they've been picked up.</p>
+    </div>
+    <div class="role-card">
+      <span class="role-emoji">👁</span>
+      <h3>Public Viewer</h3>
+      <p>Can see if a taxi is heading their direction. Never sees exact coordinates or passenger identity.</p>
+    </div>
+  </div>
+</section>
+
+<div class="section-divider"></div>
+
+<!-- SECURITY -->
+<section id="security" class="reveal">
+  <div class="section-tag">Security & Privacy</div>
+  <h2 class="section-title">Security at Every Layer</h2>
+  <p class="section-sub">SafeRoute is built with a cybersecurity-aware design — because location data is sensitive data.</p>
+  <div class="security-grid">
+    <div class="sec-card">
+      <span class="sec-icon">🔐</span>
+      <div>
+        <h4>HTTPS / TLS Encryption</h4>
+        <p>All GPS data is transmitted over encrypted connections. No location data travels in plaintext.</p>
+      </div>
+    </div>
+    <div class="sec-card">
+      <span class="sec-icon">🪙</span>
+      <div>
+        <h4>JWT Authentication</h4>
+        <p>Token-based authentication ensures only verified users access the system and their assigned data.</p>
+      </div>
+    </div>
+    <div class="sec-card">
+      <span class="sec-icon">🛡</span>
+      <div>
+        <h4>Role-Based Access Control</h4>
+        <p>RBAC enforces that each user only accesses data appropriate to their role and active ride status.</p>
+      </div>
+    </div>
+    <div class="sec-card">
+      <span class="sec-icon">⏱</span>
+      <div>
+        <h4>Time-Limited Tokens</h4>
+        <p>Shared tracking links expire when the ride ends. No indefinite access to anyone's location.</p>
+      </div>
+    </div>
+    <div class="sec-card">
+      <span class="sec-icon">🗑</span>
+      <div>
+        <h4>Data Retention Policy</h4>
+        <p>GPS logs are purged after a defined retention window. You ride — we don't hoard your history.</p>
+      </div>
+    </div>
+    <div class="sec-card">
+      <span class="sec-icon">✋</span>
+      <div>
+        <h4>Consent-Driven Sharing</h4>
+        <p>No location is ever shared without the passenger's explicit action. Full opt-in, always.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<div class="cta-section" id="cta">
+  <div class="cta-inner reveal">
+    <h2>Ready to Ride <span style="color:var(--accent)">Safely?</span></h2>
+    <p>A project by Jody-Ann Trimmingham demonstrating real-world GPS privacy, role-based access control, and safety-first system design.</p>
+    <div class="cta-btns">
+      <a href="saferoute-auth.html" class="btn-primary">🗺 Explore the System</a>
+      <a href="#how" class="btn-ghost">📂 View Features</a>
+    </div>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-logo">Safe<span>Route</span></div>
+  <p>Privacy-First GPS Taxi System &mdash; Jody-Ann Trimmingham</p>
+  <p style="font-size:0.75rem; color:var(--muted)">Built with safety. Designed with care.</p>
+</footer>
+
+<script>
+  // Custom cursor
+  const cursor = document.getElementById('cursor');
+  const ring   = document.getElementById('cursorRing');
+  document.addEventListener('mousemove', e => {
+    cursor.style.left = e.clientX + 'px';
+    cursor.style.top  = e.clientY + 'px';
+    setTimeout(() => {
+      ring.style.left = e.clientX + 'px';
+      ring.style.top  = e.clientY + 'px';
+    }, 80);
+  });
+  document.querySelectorAll('a, button').forEach(el => {
+    el.addEventListener('mouseenter', () => { cursor.style.transform = 'translate(-50%,-50%) scale(2)'; ring.style.transform = 'translate(-50%,-50%) scale(1.5)'; });
+    el.addEventListener('mouseleave', () => { cursor.style.transform = 'translate(-50%,-50%) scale(1)'; ring.style.transform = 'translate(-50%,-50%) scale(1)'; });
+  });
+
+  // Scroll reveal
+  const reveals = document.querySelectorAll('.reveal');
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(e => { if(e.isIntersecting) { e.target.classList.add('visible'); } });
+  }, { threshold: 0.12 });
+  reveals.forEach(r => observer.observe(r));
+
+  // Animated counter
+  function animateCount(el, target, suffix='') {
+    let current = 0;
+    const step = target / 60;
+    const timer = setInterval(() => {
+      current = Math.min(current + step, target);
+      el.textContent = Math.round(current) + suffix;
+      if(current >= target) clearInterval(timer);
+    }, 16);
+  }
+</script>
+</body>
+</html>

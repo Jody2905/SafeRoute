@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>SafeRoute – Trip History</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+<style>
+  :root{--bg:#07090f;--surface:#0d1117;--card:#111620;--border:#1e2535;--accent:#00e5a0;--accent2:#0080ff;--warn:#ff9f43;--danger:#ff4757;--text:#e8edf5;--muted:#6b7896;--sw:260px;}
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+  html,body{height:100%;overflow:hidden;}
+  body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);cursor:none;display:flex;}
+  .cursor{width:10px;height:10px;background:var(--accent);border-radius:50%;position:fixed;top:0;left:0;pointer-events:none;z-index:9999;transform:translate(-50%,-50%);transition:transform .15s;}
+  .cursor-ring{width:30px;height:30px;border:1.5px solid rgba(0,229,160,.35);border-radius:50%;position:fixed;top:0;left:0;pointer-events:none;z-index:9998;transform:translate(-50%,-50%);transition:left .35s cubic-bezier(.25,.46,.45,.94),top .35s cubic-bezier(.25,.46,.45,.94);}
+  .sidebar{width:var(--sw);background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;height:100vh;flex-shrink:0;}
+  .sb-logo{padding:1.4rem 1.5rem 1.25rem;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:.6rem;}
+  .sb-logo a{font-family:'Syne',sans-serif;font-weight:800;font-size:1.2rem;letter-spacing:-.03em;color:var(--text);text-decoration:none;cursor:none;}
+  .sb-logo a span{color:var(--accent);}
+  .driver-badge{background:rgba(0,128,255,.1);border:1px solid rgba(0,128,255,.25);color:var(--accent2);font-size:.58rem;font-weight:700;padding:2px 8px;border-radius:50px;text-transform:uppercase;letter-spacing:.06em;margin-left:auto;}
+  .sb-profile{padding:1rem 1.5rem;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:.8rem;}
+  .sb-av{width:42px;height:42px;border-radius:13px;background:linear-gradient(135deg,rgba(0,128,255,.2),rgba(0,229,160,.1));border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0;}
+  .sb-name{font-family:'Syne',sans-serif;font-weight:700;font-size:.88rem;}
+  .sb-plate{font-size:.68rem;color:var(--muted);font-family:monospace;}
+  .sb-rating{margin-left:auto;text-align:right;}
+  .sb-stars{font-size:.82rem;color:var(--warn);}
+  .sb-trips{font-size:.62rem;color:var(--muted);}
+  .sb-online{padding:.8rem 1.5rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+  .ol-label{font-size:.8rem;font-weight:500;}
+  .ol-sub{font-size:.65rem;color:var(--muted);}
+  .big-tog{width:50px;height:26px;background:var(--border);border-radius:50px;position:relative;cursor:none;transition:background .25s;flex-shrink:0;}
+  .big-tog.on{background:var(--accent);}
+  .big-tog::after{content:'';position:absolute;top:3px;left:3px;width:20px;height:20px;background:#fff;border-radius:50%;transition:left .25s;}
+  .big-tog.on::after{left:27px;}
+  .sb-nav{flex:1;padding:.5rem 0;overflow-y:auto;}
+  .sb-nav::-webkit-scrollbar{width:0;}
+  .ng{font-size:.6rem;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-weight:600;padding:.5rem 1.5rem .2rem;}
+  .ni{display:flex;align-items:center;gap:.7rem;padding:.6rem 1.5rem;cursor:none;font-size:.82rem;color:var(--muted);transition:background .15s,color .15s;position:relative;}
+  .ni:hover{background:rgba(255,255,255,.025);color:var(--text);}
+  .ni.active{color:var(--accent);background:rgba(0,229,160,.05);}
+  .ni.active::before{content:'';position:absolute;left:0;top:5px;bottom:5px;width:3px;background:var(--accent);border-radius:0 2px 2px 0;}
+  .nib{margin-left:auto;background:var(--accent);color:#000;font-size:.58rem;font-weight:700;padding:2px 7px;border-radius:50px;}
+  .nib.w{background:var(--warn);}
+  .sb-bot{padding:1rem 1.5rem;border-top:1px solid var(--border);}
+  .so-btn{width:100%;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:.55rem;font-size:.78rem;color:var(--muted);cursor:none;display:flex;align-items:center;justify-content:center;gap:.5rem;transition:all .2s;}
+  .so-btn:hover{border-color:rgba(255,71,87,.3);color:var(--danger);}
+  .main{flex:1;display:flex;flex-direction:column;height:100vh;overflow:hidden;}
+  .topbar{height:60px;flex-shrink:0;background:rgba(7,9,15,.9);border-bottom:1px solid var(--border);backdrop-filter:blur(20px);display:flex;align-items:center;justify-content:space-between;padding:0 1.75rem;}
+  .tb-title{font-family:'Syne',sans-serif;font-weight:700;font-size:1.05rem;}
+  .tb-r{display:flex;align-items:center;gap:.75rem;}
+  .tb-clk{font-family:'Syne',sans-serif;font-weight:700;font-size:.88rem;color:var(--muted);}
+  .tb-btn{height:34px;padding:0 .9rem;background:var(--card);border:1px solid var(--border);border-radius:9px;font-size:.78rem;color:var(--muted);cursor:none;transition:all .2s;display:flex;align-items:center;gap:.4rem;}
+  .tb-btn:hover{border-color:rgba(0,229,160,.3);color:var(--text);}
+  .tb-btn.primary{background:var(--accent);color:#000;border-color:var(--accent);font-weight:600;}
+  .content{flex:1;overflow-y:auto;overflow-x:hidden;padding:1.5rem 1.75rem;display:flex;flex-direction:column;gap:1.25rem;}
+  .content::-webkit-scrollbar{width:4px;}
+  .content::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+  .dc{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:1.25rem;}
+  .dc-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;}
+  .dc-title{font-family:'Syne',sans-serif;font-weight:700;font-size:.95rem;}
+  .dc-tag{font-size:.62rem;font-weight:700;padding:3px 10px;border-radius:50px;text-transform:uppercase;letter-spacing:.05em;}
+  .tag-g{background:rgba(0,229,160,.1);color:var(--accent);}
+  .tag-b{background:rgba(0,128,255,.1);color:var(--accent2);}
+  .tag-w{background:rgba(255,159,67,.1);color:var(--warn);}
+  .tag-r{background:rgba(255,71,87,.1);color:var(--danger);}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;}
+  .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1.25rem;}
+  .sc{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:1rem 1.1rem;transition:all .2s;position:relative;overflow:hidden;}
+  .sc::after{content:'';position:absolute;top:0;left:0;right:0;height:2px;opacity:0;transition:opacity .2s;}
+  .sc.g::after{background:linear-gradient(90deg,var(--accent),transparent);}
+  .sc.b::after{background:linear-gradient(90deg,var(--accent2),transparent);}
+  .sc.w::after{background:linear-gradient(90deg,var(--warn),transparent);}
+  .sc:hover{transform:translateY(-2px);border-color:rgba(0,229,160,.2);}
+  .sc:hover::after{opacity:1;}
+  .sc-i{font-size:1.1rem;margin-bottom:.5rem;}
+  .sc-v{font-family:'Syne',sans-serif;font-weight:800;font-size:1.55rem;letter-spacing:-.03em;}
+  .sc-v .u{font-size:.85rem;font-weight:500;color:var(--muted);}
+  .sc-l{font-size:.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-top:.15rem;}
+  .sc-t{font-size:.68rem;margin-top:.3rem;}
+  .sc-t.up{color:var(--accent);}.sc-t.dn{color:var(--danger);}
+  .tog{width:38px;height:21px;background:var(--border);border-radius:50px;position:relative;cursor:none;transition:background .2s;flex-shrink:0;}
+  .tog.on{background:var(--accent);}
+  .tog::after{content:'';position:absolute;top:2.5px;left:2.5px;width:16px;height:16px;background:#fff;border-radius:50%;transition:left .2s;}
+  .tog.on::after{left:19.5px;}
+  .field{display:flex;flex-direction:column;gap:.35rem;margin-bottom:.8rem;}
+  .field label{font-size:.68rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;}
+  input[type=text],input[type=email],input[type=tel],select,textarea{width:100%;background:var(--card);border:1px solid var(--border);border-radius:11px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:.88rem;padding:.72rem .9rem;outline:none;transition:border-color .2s;cursor:none;appearance:none;}
+  input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(0,229,160,.07);}
+  input::placeholder,textarea::placeholder{color:var(--muted);opacity:.6;}
+  .badge{font-size:.62rem;font-weight:700;padding:2px 8px;border-radius:50px;}
+  .b-g{background:rgba(0,229,160,.1);color:var(--accent);}
+  .b-b{background:rgba(0,128,255,.1);color:var(--accent2);}
+  .b-w{background:rgba(255,159,67,.1);color:var(--warn);}
+  .b-r{background:rgba(255,71,87,.1);color:var(--danger);}
+  .btn-p{background:var(--accent);color:#000;border:none;border-radius:11px;padding:.72rem 1.4rem;font-family:'Syne',sans-serif;font-weight:700;font-size:.85rem;cursor:none;transition:all .2s;}
+  .btn-p:hover{box-shadow:0 0 22px rgba(0,229,160,.3);transform:translateY(-1px);}
+  .btn-g{background:transparent;color:var(--muted);border:1px solid var(--border);border-radius:11px;padding:.72rem 1.4rem;font-size:.82rem;cursor:none;transition:all .2s;}
+  .btn-g:hover{border-color:rgba(0,229,160,.2);color:var(--text);}
+  .toast{position:fixed;bottom:2rem;left:50%;transform:translateX(-50%) translateY(100px);background:var(--card);border:1px solid var(--border);border-radius:12px;padding:.7rem 1.2rem;display:flex;align-items:center;gap:.6rem;font-size:.82rem;z-index:600;transition:transform .4s cubic-bezier(.34,1.56,.64,1);box-shadow:0 8px 32px rgba(0,0,0,.4);}
+  .toast.show{transform:translateX(-50%) translateY(0);}
+  .fi{animation:fi .45s ease both;}@keyframes fi{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+  .fi1{animation-delay:.05s}.fi2{animation-delay:.1s}.fi3{animation-delay:.15s}.fi4{animation-delay:.2s}
+  @media(max-width:820px){.sidebar{display:none;}.grid2,.grid3{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+<div class="cursor" id="cursor"></div>
+<div class="cursor-ring" id="cursorRing"></div>
+<div class="sidebar"><div class="sb-logo"><a href="saferoute-landing.html">Safe<span>Route</span></a><span class="driver-badge">Driver</span></div><div class="sb-profile"><div class="sb-av">👨🏽‍✈️</div><div><div class="sb-name">Marcus T.</div><div class="sb-plate">PBM 4421 · Toyota Corolla</div></div><div class="sb-rating"><div class="sb-stars">★ 4.9</div><div class="sb-trips">312 trips</div></div></div><div class="sb-online"><div><div class="ol-label" id="olLabel">🟢 Online</div><div class="ol-sub" id="olSub">Accepting rides</div></div><div class="big-tog on" id="onlineTog" onclick="toggleOnline()"></div></div><nav class="sb-nav"><div class="ni" onclick="go('saferoute-driver.html')">📊 Dashboard </div><div class="ni" onclick="go('saferoute-tracking.html')">🗺 Live Map </div><div class="ng">Main</div><div class="ni" onclick="go('saferoute-ride-requests.html')">📋 Ride Requests <span class="nib">2</span></div><div class="ni active" onclick="void(0)">📜 Trip History </div><div class="ng">Earnings</div><div class="ni" onclick="go('saferoute-earnings.html')">💰 Earnings </div><div class="ni" onclick="go('saferoute-performance.html')">📈 Performance </div><div class="ng">Account</div><div class="ni" onclick="go('saferoute-driver-settings.html')">⚙️ Settings </div><div class="ni" onclick="go('saferoute-privacy.html')">🛡 Safety Center </div></nav><div class="sb-bot"><button class="so-btn" onclick="signOut()">🚪 Sign Out</button></div></div>
+<div class="main">
+  <div class="topbar">
+    <div class="tb-title">Trip History</div>
+    <div class="tb-r"><span class="tb-clk" id="clk">--:--</span><button class="tb-btn" onclick="showToast('📤','Exporting...')">📤 Export</button></div>
+  </div>
+  <div class="content">
+<div class="fi fi1" style="display:flex;align-items:center;justify-content:space-between;">
+  <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:1.1rem;">Trip History</div>
+  <button class="tb-btn" onclick="showToast('📤','Exporting trip report...')">📤 Export</button>
+</div>
+
+<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;" class="fi fi1">
+  <div class="sc g"><div class="sc-i">✅</div><div class="sc-v">44<span class="u"> trips</span></div><div class="sc-l">Completed</div><div class="sc-t up">↑ +3 this week</div></div>
+  <div class="sc b"><div class="sc-i">❌</div><div class="sc-v">3<span class="u"> trips</span></div><div class="sc-l">Declined / Expired</div><div class="sc-t dn">↓ 6% rate</div></div>
+  <div class="sc g"><div class="sc-i">💰</div><div class="sc-v">$28,400</div><div class="sc-l">Earned This Week</div><div class="sc-t up">↑ +17.8%</div></div>
+  <div class="sc w"><div class="sc-i">📏</div><div class="sc-v">312<span class="u"> km</span></div><div class="sc-l">Total This Week</div></div>
+</div>
+
+<div class="fi fi2" style="display:flex;gap:.6rem;flex-wrap:wrap;">
+  <div class="badge b-g" style="padding:.35rem .9rem;font-size:.75rem;cursor:none;" onclick="showToast('🔍','All trips')">All Trips</div>
+  <div class="badge" style="background:var(--card);border:1px solid var(--border);color:var(--muted);padding:.35rem .9rem;font-size:.75rem;cursor:none;" onclick="showToast('✅','Completed trips')">✅ Completed</div>
+  <div class="badge" style="background:var(--card);border:1px solid var(--border);color:var(--muted);padding:.35rem .9rem;font-size:.75rem;cursor:none;" onclick="showToast('📅','This month')">📅 This Month</div>
+  <div class="badge" style="background:var(--card);border:1px solid var(--border);color:var(--muted);padding:.35rem .9rem;font-size:.75rem;cursor:none;" onclick="showToast('📅','This week')">📅 This Week</div>
+</div>
+
+<div style="background:var(--card);border:1px solid var(--border);border-radius:18px;overflow:hidden;" class="fi fi3">
+  <div style="display:grid;grid-template-columns:2fr 1.2fr 1fr .9fr .9fr;gap:.5rem;padding:.7rem 1.25rem;background:var(--surface);border-bottom:1px solid var(--border);">
+    <span style="font-size:.63rem;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:600;">Route</span>
+    <span style="font-size:.63rem;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:600;">Passenger</span>
+    <span style="font-size:.63rem;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:600;">Date</span>
+    <span style="font-size:.63rem;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:600;">Distance</span>
+    <span style="font-size:.63rem;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:600;">Earned</span>
+  </div>
+  <div style="display:grid;grid-template-columns:2fr 1.2fr 1fr .9fr .9fr;gap:.5rem;padding:.82rem 1.25rem;border-bottom:1px solid var(--border);align-items:center;cursor:none;transition:background .15s;" class="trip-row" onmouseenter="this.style.background='rgba(255,255,255,.02)'" onmouseleave="this.style.background='transparent'">
+    <div><div style="font-size:.82rem;font-weight:500;">New Kingston → Downtown Kingston</div><div style="font-size:.68rem;color:var(--muted);">2:14 PM · Standard</div></div>
+    <div style="font-size:.8rem;">Jody-Ann T.</div>
+    <div style="font-size:.75rem;color:var(--muted);">Today</div>
+    <div style="font-size:.78rem;">3.2 km</div>
+    <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:.88rem;color:var(--accent);">$850</div>
+  </div>
+<div style="display:grid;grid-template-columns:2fr 1.2fr 1fr .9fr .9fr;gap:.5rem;padding:.82rem 1.25rem;border-bottom:1px solid var(--border);align-items:center;cursor:none;transition:background .15s;" class="trip-row" onmouseenter="this.style.background='rgba(255,255,255,.02)'" onmouseleave="this.style.background='transparent'">
+    <div><div style="font-size:.82rem;font-weight:500;">Half Way Tree → UWI Mona</div><div style="font-size:.68rem;color:var(--muted);">8:05 AM · Standard</div></div>
+    <div style="font-size:.8rem;">Sandra M.</div>
+    <div style="font-size:.75rem;color:var(--muted);">Mar 1</div>
+    <div style="font-size:.78rem;">5.1 km</div>
+    <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:.88rem;color:var(--accent);">$950</div>
+  </div>
+<div style="display:grid;grid-template-columns:2fr 1.2fr 1fr .9fr .9fr;gap:.5rem;padding:.82rem 1.25rem;border-bottom:1px solid var(--border);align-items:center;cursor:none;transition:background .15s;" class="trip-row" onmouseenter="this.style.background='rgba(255,255,255,.02)'" onmouseleave="this.style.background='transparent'">
+    <div><div style="font-size:.82rem;font-weight:500;">Spanish Town → Halfway Tree</div><div style="font-size:.68rem;color:var(--muted);">3:15 PM · Executive</div></div>
+    <div style="font-size:.8rem;">Devon P.</div>
+    <div style="font-size:.75rem;color:var(--muted);">Feb 26</div>
+    <div style="font-size:.78rem;">18.5 km</div>
+    <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:.88rem;color:var(--accent);">$2,800</div>
+  </div>
+<div style="display:grid;grid-template-columns:2fr 1.2fr 1fr .9fr .9fr;gap:.5rem;padding:.82rem 1.25rem;border-bottom:1px solid var(--border);align-items:center;cursor:none;transition:background .15s;" class="trip-row" onmouseenter="this.style.background='rgba(255,255,255,.02)'" onmouseleave="this.style.background='transparent'">
+    <div><div style="font-size:.82rem;font-weight:500;">Portmore Mall → New Kingston</div><div style="font-size:.68rem;color:var(--muted);">5:40 PM · Comfort</div></div>
+    <div style="font-size:.8rem;">Jody-Ann T.</div>
+    <div style="font-size:.75rem;color:var(--muted);">Feb 25</div>
+    <div style="font-size:.78rem;">7.8 km</div>
+    <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:.88rem;color:var(--accent);">$1,400</div>
+  </div>
+<div style="display:grid;grid-template-columns:2fr 1.2fr 1fr .9fr .9fr;gap:.5rem;padding:.82rem 1.25rem;border-bottom:1px solid var(--border);align-items:center;cursor:none;transition:background .15s;" class="trip-row" onmouseenter="this.style.background='rgba(255,255,255,.02)'" onmouseleave="this.style.background='transparent'">
+    <div><div style="font-size:.82rem;font-weight:500;">UWI → New Kingston</div><div style="font-size:.68rem;color:var(--muted);">6:00 PM · Standard</div></div>
+    <div style="font-size:.8rem;">Devon P.</div>
+    <div style="font-size:.75rem;color:var(--muted);">Feb 24</div>
+    <div style="font-size:.78rem;">5.2 km</div>
+    <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:.88rem;color:var(--accent);">$900</div>
+  </div>
+<div style="display:grid;grid-template-columns:2fr 1.2fr 1fr .9fr .9fr;gap:.5rem;padding:.82rem 1.25rem;border-bottom:1px solid var(--border);align-items:center;cursor:none;transition:background .15s;" class="trip-row" onmouseenter="this.style.background='rgba(255,255,255,.02)'" onmouseleave="this.style.background='transparent'">
+    <div><div style="font-size:.82rem;font-weight:500;">Liguanea → Portmore</div><div style="font-size:.68rem;color:var(--muted);">11:20 AM · Standard</div></div>
+    <div style="font-size:.8rem;">Sandra M.</div>
+    <div style="font-size:.75rem;color:var(--muted);">Feb 22</div>
+    <div style="font-size:.78rem;">14.1 km</div>
+    <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:.88rem;color:var(--accent);">$2,200</div>
+  </div>
+<div style="display:grid;grid-template-columns:2fr 1.2fr 1fr .9fr .9fr;gap:.5rem;padding:.82rem 1.25rem;border-bottom:1px solid var(--border);align-items:center;cursor:none;transition:background .15s;" class="trip-row" onmouseenter="this.style.background='rgba(255,255,255,.02)'" onmouseleave="this.style.background='transparent'">
+    <div><div style="font-size:.82rem;font-weight:500;">Downtown → New Kingston</div><div style="font-size:.68rem;color:var(--muted);">9:10 AM · Standard</div></div>
+    <div style="font-size:.8rem;">Jody-Ann T.</div>
+    <div style="font-size:.75rem;color:var(--muted);">Feb 20</div>
+    <div style="font-size:.78rem;">3.5 km</div>
+    <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:.88rem;color:var(--accent);">$900</div>
+  </div>
+</div>
+</div>
+</div>
+<div class="toast" id="toastEl"><span id="tIcon"></span><span id="tText"></span></div>
+<script>
+const cur=document.getElementById('cursor'),ring=document.getElementById('cursorRing');
+document.addEventListener('mousemove',e=>{cur.style.left=e.clientX+'px';cur.style.top=e.clientY+'px';setTimeout(()=>{ring.style.left=e.clientX+'px';ring.style.top=e.clientY+'px';},80);});
+document.querySelectorAll('a,button,.ni,.tog,.big-tog,.card-h,.req-card,.trip-row').forEach(el=>{el.addEventListener('mouseenter',()=>cur.style.transform='translate(-50%,-50%) scale(1.8)');el.addEventListener('mouseleave',()=>cur.style.transform='translate(-50%,-50%) scale(1)');});
+function tick(){const el=document.getElementById('clk');if(el)el.textContent=new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});}tick();setInterval(tick,1000);
+function go(p){window.location.href=p;}
+function signOut(){showToast('👋','Logging out...');setTimeout(()=>go('saferoute-auth.html'),1200);}
+let isOnline=true;
+function toggleOnline(){isOnline=!isOnline;const t=document.getElementById('onlineTog');if(t)t.classList.toggle('on');const l=document.getElementById('olLabel'),s=document.getElementById('olSub');if(l)l.textContent=isOnline?'🟢 Online':'🔴 Offline';if(s)s.textContent=isOnline?'Accepting rides':'Not accepting';showToast(isOnline?'🟢':'🔴',isOnline?'You are now online.':'You have gone offline.');}
+let tt;function showToast(i,t){const el=document.getElementById('toastEl');document.getElementById('tIcon').textContent=i;document.getElementById('tText').textContent=t;el.classList.add('show');clearTimeout(tt);tt=setTimeout(()=>el.classList.remove('show'),2800);}
+</script>
+</body>
+</html>
