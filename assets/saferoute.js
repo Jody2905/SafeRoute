@@ -1,6 +1,6 @@
 /* SafeRoute shared helpers, loaded on every page.
    - Phone menu: the sidebar is hidden on small screens, so add a menu button that opens it.
-   - Touch screens: hide the custom cursor dot (it has no mouse to follow) and restore the normal cursor.
+   - Normal mouse pointer on every page (replaces the hard-to-see custom cursor dot).
    - SOS: an honest emergency sheet with a real call button and a real "share my location" link. */
 (function () {
   // Emergency numbers for St. Vincent and the Grenadines (911 and 999 both reach police, fire and ambulance).
@@ -8,7 +8,12 @@
 
   var css = document.createElement("style");
   css.textContent = [
-    "@media (hover:none),(pointer:coarse){.cursor,.cursor-ring{display:none!important}*{cursor:auto!important}}",
+    // Use the normal mouse pointer everywhere (the custom dot was hard to see).
+    ".cursor,.cursor-ring{display:none!important}",
+    "*{cursor:auto!important}",
+    "a,button,select,label,summary,[onclick],[role=link],[role=switch],.ni,.nav-item,.tog,.toggle,.big-tog,.chip,.card-hover{cursor:pointer!important}",
+    "input,textarea{cursor:text!important}",
+    ".leaflet-container{cursor:grab!important}.leaflet-dragging .leaflet-container{cursor:grabbing!important}",
     "@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}",
     ":focus-visible{outline:2px solid #00e5a0;outline-offset:2px}",
     ".sr-menu{display:none;position:fixed;top:12px;left:12px;z-index:9100;width:44px;height:44px;border-radius:12px;border:1px solid #1e2535;background:#0d1117;color:#e8edf5;font-size:1.3rem;cursor:pointer}",

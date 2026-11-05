@@ -844,7 +844,7 @@ function drawMiniMap() {
 setTimeout(drawMiniMap,150);
 
 /* ── Location text animation ── */
-const locs=['Arnos Vale, St. George · updating...','18 Knutsford Blvd · accurate to 4m','Arnos Vale, St. George · live'];
+const locs=['Arnos Vale, St. George · updating...','Windward Highway, Arnos Vale · accurate to 4m','Arnos Vale, St. George · live'];
 let li=0;
 setInterval(()=>{ li=(li+1)%locs.length; const el=document.getElementById('locText'); if(el)el.textContent=locs[li]; },4000);
 

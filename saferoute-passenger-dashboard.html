@@ -403,7 +403,7 @@
     <div class="nav-item active" onclick="setNav(this)"><span class="ni-icon">📊</span> Dashboard</div>
     <div class="nav-item" onclick="goBook()"><span class="ni-icon">🚕</span> Book a Ride</div>
     <div class="nav-item" onclick="goTrack()"><span class="ni-icon">🗺</span> Track My Ride <span class="ni-badge">Live</span></div>
-    <div class="nav-item" onclick="go('saferoute-trip-history.html')"><span class="ni-icon">📜 Trip History</div>
+    <div class="nav-item" onclick="go('saferoute-trip-history.html')"><span class="ni-icon">📜</span> Trip History</div>
 
     <div class="nav-group" style="margin-top:.6rem;">Safety</div>
     <div class="nav-item" onclick="go('saferoute-contacts.html')"><span class="ni-icon">👥</span> Trusted Contacts</div>
@@ -733,7 +733,7 @@ function drawSpendChart(){
   const W=canvas.offsetWidth||300, H=110;
   canvas.width=W; canvas.height=H;
   const ctx=canvas.getContext('2d');
-  const data=[4200,6800,5500,7200,6100,8500];
+  const data=[72,117,95,124,105,147];
   const months=['Oct','Nov','Dec','Jan','Feb','Mar'];
   const max=Math.max(...data);
 
@@ -766,4 +766,17 @@ function drawSpendChart(){
     ctx.fillStyle=i===5?'#ff9f43':'rgba(255,159,67,0.5)';ctx.fill();
     if(i===5){ ctx.beginPath();ctx.arc(p.x,p.y,10,0,Math.PI*2);ctx.fillStyle='rgba(255,159,67,0.15)';ctx.fill(); }
     // Month labels
-    ctx
+    ctx.fillStyle=i===5?'#e8edf5':'#6b7896';ctx.font='500 10px DM Sans';ctx.textAlign='center';
+    ctx.fillText(months[i],p.x,H-6);
+  });
+}
+drawSpendChart();
+window.addEventListener('resize',drawSpendChart);
+
+function go(p){ window.location.href=p; }
+function signOut(){ showToast('👋','Signing out...'); setTimeout(()=>go('saferoute-auth.html'),1200); }
+</script>
+<script src="assets/safety.js"></script>
+<script src="assets/saferoute.js"></script>
+</body>
+</html>
