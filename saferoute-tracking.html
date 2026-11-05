@@ -900,9 +900,7 @@ function adjustZoom(dir) {
 }
 
 /* ── SOS ── */
-function triggerSOS() {
-  showToast('🆘', 'Emergency alert sent! Authorities notified.');
-}
+// triggerSOS() lives in assets/saferoute.js: call buttons for police and ambulance, plus a real GPS location share.
 
 /* ── End ride ── */
 function endRide() {
@@ -935,5 +933,6 @@ window.addEventListener('resize', () => { resizeCanvas(); });
 resizeCanvas();
 drawMap();
 </script>
+<script src="assets/saferoute.js"></script>
 </body>
 </html>

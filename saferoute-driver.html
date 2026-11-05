@@ -403,21 +403,21 @@
   <nav class="sidebar-nav">
     <div class="nav-group-label">Main</div>
     <div class="nav-item active" onclick="setNav(this)"><span class="nav-icon">📊</span> Dashboard</div>
-    <div class="nav-item" onclick="setNav(this)"><span class="nav-icon">🗺</span> Live Map</div>
-    <div class="nav-item" onclick="setNav(this)"><span class="nav-icon">📋</span> Ride Requests <span class="nav-badge">2</span></div>
-    <div class="nav-item" onclick="setNav(this)"><span class="nav-icon">📜</span> Trip History</div>
+    <div class="nav-item" onclick="go('saferoute-tracking.html')"><span class="nav-icon">🗺</span> Live Map</div>
+    <div class="nav-item" onclick="go('saferoute-ride-requests.html')"><span class="nav-icon">📋</span> Ride Requests <span class="nav-badge">2</span></div>
+    <div class="nav-item" onclick="go('saferoute-driver-trips.html')"><span class="nav-icon">📜</span> Trip History</div>
 
     <div class="nav-group-label" style="margin-top:.75rem">Earnings</div>
-    <div class="nav-item" onclick="setNav(this)"><span class="nav-icon">💰</span> Earnings</div>
-    <div class="nav-item" onclick="setNav(this)"><span class="nav-icon">📈</span> Performance</div>
+    <div class="nav-item" onclick="go('saferoute-earnings.html')"><span class="nav-icon">💰</span> Earnings</div>
+    <div class="nav-item" onclick="go('saferoute-performance.html')"><span class="nav-icon">📈</span> Performance</div>
 
     <div class="nav-group-label" style="margin-top:.75rem">Account</div>
-    <div class="nav-item" onclick="setNav(this)"><span class="nav-icon">⚙️</span> Settings</div>
-    <div class="nav-item" onclick="setNav(this)"><span class="nav-icon">🛡</span> Safety Center</div>
+    <div class="nav-item" onclick="go('saferoute-driver-settings.html')"><span class="nav-icon">⚙️</span> Settings</div>
+    <div class="nav-item" onclick="go('saferoute-privacy.html')"><span class="nav-icon">🛡</span> Safety Center</div>
   </nav>
 
   <div class="sidebar-footer">
-    <button class="sf-btn" onclick="showToast('👋','Logging out...')">🚪 Sign Out</button>
+    <button class="sf-btn" onclick="driverSignOut()">🚪 Sign Out</button>
   </div>
 </div>
 
@@ -429,10 +429,10 @@
     <span class="topbar-title">Driver Dashboard</span>
     <div class="topbar-right">
       <span class="tb-clock" id="clockEl">--:--</span>
-      <div class="tb-notif" onclick="showToast('🔔','2 new ride requests nearby.')">
+      <div class="tb-notif" onclick="go('saferoute-driver-messages.html')">
         🔔 <span class="notif-dot"></span>
       </div>
-      <div class="tb-notif" onclick="showToast('💬','No new messages.')">💬</div>
+      <div class="tb-notif" onclick="go('saferoute-driver-messages.html')">💬</div>
     </div>
   </div>
 
@@ -633,7 +633,7 @@
         </div>
         <div style="display:flex;gap:.5rem;margin-top:.75rem;">
           <button style="flex:1;background:var(--surface);border:1px solid var(--border);border-radius:9px;padding:.5rem;font-size:.72rem;color:var(--muted);cursor:none;transition:all .2s;" onmouseenter="this.style.borderColor='rgba(0,229,160,.3)'" onmouseleave="this.style.borderColor='var(--border)'" onclick="showToast('📍','Location refreshed.')">🔄 Refresh</button>
-          <button style="flex:1;background:var(--surface);border:1px solid var(--border);border-radius:9px;padding:.5rem;font-size:.72rem;color:var(--muted);cursor:none;transition:all .2s;" onmouseenter="this.style.borderColor='rgba(0,229,160,.3)'" onmouseleave="this.style.borderColor='var(--border)'" onclick="showToast('🗺','Opening full map...')">🗺 Full Map</button>
+          <button style="flex:1;background:var(--surface);border:1px solid var(--border);border-radius:9px;padding:.5rem;font-size:.72rem;color:var(--muted);cursor:none;transition:all .2s;" onmouseenter="this.style.borderColor='rgba(0,229,160,.3)'" onmouseleave="this.style.borderColor='var(--border)'" onclick="go('saferoute-tracking.html')">🗺 Full Map</button>
         </div>
       </div>
 
@@ -845,6 +845,10 @@ setTimeout(drawMiniMap,150);
 const locs=['New Kingston, St. Andrew · updating...','18 Knutsford Blvd · accurate to 4m','New Kingston, St. Andrew · live'];
 let li=0;
 setInterval(()=>{ li=(li+1)%locs.length; const el=document.getElementById('locText'); if(el)el.textContent=locs[li]; },4000);
+
+function go(p){window.location.href=p;}
+function driverSignOut(){ showToast('👋','Logging out...'); setTimeout(()=>window.location.href='saferoute-auth.html',1200); }
 </script>
+<script src="assets/saferoute.js"></script>
 </body>
 </html>

@@ -118,7 +118,7 @@
 
 <div style="display:flex;flex-direction:column;gap:.6rem;" class="fi fi2">
   <div style="font-size:.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;font-weight:600;">Today</div>
-  <div style="background:var(--card);border:1px solid rgba(0,229,160,.25);border-left:3px solid var(--accent);border-radius:14px;padding:1rem 1.1rem;display:flex;align-items:flex-start;gap:.85rem;cursor:none;transition:all .2s;" onmouseenter="this.style.transform='translateX(3px)'" onmouseleave="this.style.transform='none'" onclick="showToast('📋','go('saferoute-ride-requests.html')')">
+  <div style="background:var(--card);border:1px solid rgba(0,229,160,.25);border-left:3px solid var(--accent);border-radius:14px;padding:1rem 1.1rem;display:flex;align-items:flex-start;gap:.85rem;cursor:none;transition:all .2s;" onmouseenter="this.style.transform='translateX(3px)'" onmouseleave="this.style.transform='none'" onclick="go('saferoute-ride-requests.html')">
     <div style="width:38px;height:38px;border-radius:10px;background:rgba(0,229,160,.1);display:flex;align-items:center;justify-content:center;font-size:1.05rem;flex-shrink:0;">📋</div>
     <div style="flex:1;">
       <div style="font-size:.85rem;font-weight:600;margin-bottom:3px;">New Ride Request</div>
@@ -127,7 +127,7 @@
     </div>
     <div style="width:8px;height:8px;background:var(--accent);border-radius:50%;margin-top:4px;"></div>
   </div>
-<div style="background:var(--card);border:1px solid rgba(0,229,160,.25);border-left:3px solid var(--accent);border-radius:14px;padding:1rem 1.1rem;display:flex;align-items:flex-start;gap:.85rem;cursor:none;transition:all .2s;" onmouseenter="this.style.transform='translateX(3px)'" onmouseleave="this.style.transform='none'" onclick="showToast('💰','go('saferoute-earnings.html')')">
+<div style="background:var(--card);border:1px solid rgba(0,229,160,.25);border-left:3px solid var(--accent);border-radius:14px;padding:1rem 1.1rem;display:flex;align-items:flex-start;gap:.85rem;cursor:none;transition:all .2s;" onmouseenter="this.style.transform='translateX(3px)'" onmouseleave="this.style.transform='none'" onclick="go('saferoute-earnings.html')">
     <div style="width:38px;height:38px;border-radius:10px;background:rgba(0,229,160,.1);display:flex;align-items:center;justify-content:center;font-size:1.05rem;flex-shrink:0;">💰</div>
     <div style="flex:1;">
       <div style="font-size:.85rem;font-weight:600;margin-bottom:3px;">Earnings Update</div>
@@ -136,7 +136,7 @@
     </div>
     <div style="width:8px;height:8px;background:var(--accent);border-radius:50%;margin-top:4px;"></div>
   </div>
-<div style="background:var(--card);border:1px solid rgba(0,229,160,.25);border-left:3px solid var(--accent);border-radius:14px;padding:1rem 1.1rem;display:flex;align-items:flex-start;gap:.85rem;cursor:none;transition:all .2s;" onmouseenter="this.style.transform='translateX(3px)'" onmouseleave="this.style.transform='none'" onclick="showToast('⭐','go('saferoute-performance.html')')">
+<div style="background:var(--card);border:1px solid rgba(0,229,160,.25);border-left:3px solid var(--accent);border-radius:14px;padding:1rem 1.1rem;display:flex;align-items:flex-start;gap:.85rem;cursor:none;transition:all .2s;" onmouseenter="this.style.transform='translateX(3px)'" onmouseleave="this.style.transform='none'" onclick="go('saferoute-performance.html')">
     <div style="width:38px;height:38px;border-radius:10px;background:rgba(255,159,67,.1);display:flex;align-items:center;justify-content:center;font-size:1.05rem;flex-shrink:0;">⭐</div>
     <div style="flex:1;">
       <div style="font-size:.85rem;font-weight:600;margin-bottom:3px;">New Review Received</div>
@@ -154,7 +154,7 @@
     </div>
     
   </div>
-<div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:1rem 1.1rem;display:flex;align-items:flex-start;gap:.85rem;cursor:none;transition:all .2s;" onmouseenter="this.style.transform='translateX(3px)'" onmouseleave="this.style.transform='none'" onclick="showToast('🔔','go('saferoute-performance.html')')">
+<div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:1rem 1.1rem;display:flex;align-items:flex-start;gap:.85rem;cursor:none;transition:all .2s;" onmouseenter="this.style.transform='translateX(3px)'" onmouseleave="this.style.transform='none'" onclick="go('saferoute-performance.html')">
     <div style="width:38px;height:38px;border-radius:10px;background:rgba(0,128,255,.1);display:flex;align-items:center;justify-content:center;font-size:1.05rem;flex-shrink:0;">🔔</div>
     <div style="flex:1;">
       <div style="font-size:.85rem;font-weight:600;margin-bottom:3px;">Weekly Summary Available</div>
@@ -178,5 +178,6 @@ let isOnline=true;
 function toggleOnline(){isOnline=!isOnline;const t=document.getElementById('onlineTog');if(t)t.classList.toggle('on');const l=document.getElementById('olLabel'),s=document.getElementById('olSub');if(l)l.textContent=isOnline?'🟢 Online':'🔴 Offline';if(s)s.textContent=isOnline?'Accepting rides':'Not accepting';showToast(isOnline?'🟢':'🔴',isOnline?'You are now online.':'You have gone offline.');}
 let tt;function showToast(i,t){const el=document.getElementById('toastEl');document.getElementById('tIcon').textContent=i;document.getElementById('tText').textContent=t;el.classList.add('show');clearTimeout(tt);tt=setTimeout(()=>el.classList.remove('show'),2800);}
 </script>
+<script src="assets/saferoute.js"></script>
 </body>
 </html>

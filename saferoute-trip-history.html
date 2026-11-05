@@ -327,5 +327,6 @@ function openTrip(route,driver,date,dist,fare,status,plate,type){
 function closeModal(){document.getElementById('tripModal').classList.remove('show');}
 let tt;function showToast(i,t){const el=document.getElementById('toastEl');document.getElementById('tIcon').textContent=i;document.getElementById('tText').textContent=t;el.classList.add('show');clearTimeout(tt);tt=setTimeout(()=>el.classList.remove('show'),2800);}
 </script>
+<script src="assets/saferoute.js"></script>
 </body>
 </html>
