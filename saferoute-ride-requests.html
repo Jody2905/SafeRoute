@@ -141,7 +141,7 @@
 <body>
 <div class="cursor" id="cursor"></div>
 <div class="cursor-ring" id="cursorRing"></div>
-<div class="sidebar"><div class="sb-logo"><a href="saferoute-landing.html">Safe<span>Route</span></a><span class="driver-badge">Driver</span></div><div class="sb-profile"><div class="sb-av">👨🏽‍✈️</div><div><div class="sb-name">Marcus T.</div><div class="sb-plate">PBM 4421 · Toyota Corolla</div></div><div class="sb-rating"><div class="sb-stars">★ 4.9</div><div class="sb-trips">312 trips</div></div></div><div class="sb-online"><div><div class="ol-label" id="olLabel">🟢 Online</div><div class="ol-sub" id="olSub">Accepting rides</div></div><div class="big-tog on" id="onlineTog" onclick="toggleOnline()"></div></div><nav class="sb-nav"><div class="ni" onclick="go('saferoute-driver.html')">📊 Dashboard </div><div class="ni" onclick="go('saferoute-tracking.html')">🗺 Live Map </div><div class="ng">Main</div><div class="ni active" onclick="void(0)">📋 Ride Requests <span class="nib">2</span></div><div class="ni" onclick="go('saferoute-driver-trips.html')">📜 Trip History </div><div class="ng">Earnings</div><div class="ni" onclick="go('saferoute-earnings.html')">💰 Earnings </div><div class="ni" onclick="go('saferoute-performance.html')">📈 Performance </div><div class="ng">Account</div><div class="ni" onclick="go('saferoute-driver-settings.html')">⚙️ Settings </div><div class="ni" onclick="go('saferoute-privacy.html')">🛡 Safety Center </div></nav><div class="sb-bot"><button class="so-btn" onclick="signOut()">🚪 Sign Out</button></div></div>
+<div class="sidebar"><div class="sb-logo"><a href="saferoute-landing.html">Safe<span>Route</span></a><span class="driver-badge">Driver</span></div><div class="sb-profile"><div class="sb-av">👨🏽‍✈️</div><div><div class="sb-name">Marcus T.</div><div class="sb-plate">H 4421 · Toyota Corolla</div></div><div class="sb-rating"><div class="sb-stars">★ 4.9</div><div class="sb-trips">312 trips</div></div></div><div class="sb-online"><div><div class="ol-label" id="olLabel">🟢 Online</div><div class="ol-sub" id="olSub">Accepting rides</div></div><div class="big-tog on" id="onlineTog" onclick="toggleOnline()"></div></div><nav class="sb-nav"><div class="ni" onclick="go('saferoute-driver.html')">📊 Dashboard </div><div class="ni" onclick="go('saferoute-tracking.html')">🗺 Live Map </div><div class="ng">Main</div><div class="ni active" onclick="void(0)">📋 Ride Requests <span class="nib">2</span></div><div class="ni" onclick="go('saferoute-driver-trips.html')">📜 Trip History </div><div class="ng">Earnings</div><div class="ni" onclick="go('saferoute-earnings.html')">💰 Earnings </div><div class="ni" onclick="go('saferoute-performance.html')">📈 Performance </div><div class="ng">Account</div><div class="ni" onclick="go('saferoute-driver-settings.html')">⚙️ Settings </div><div class="ni" onclick="go('saferoute-privacy.html')">🛡 Safety Center </div></nav><div class="sb-bot"><button class="so-btn" onclick="signOut()">🚪 Sign Out</button></div></div>
 <div class="main">
   <div class="topbar">
     <div class="tb-title">Ride Requests</div>
@@ -168,7 +168,7 @@
       <span class="badge b-w">⏱ 12s left</span>
     </div>
     <div class="timer-bar"><div class="timer-fill" id="timer1" style="width:80%;background:var(--warn);"></div></div>
-    <div class="req-route">New Kingston → Norman Manley Airport</div>
+    <div class="req-route">Arnos Vale → Argyle Airport</div>
     <div class="req-passenger">
       <div class="pass-av">👩🏽</div>
       <div style="flex:1;"><span style="font-weight:500;">Jody-Ann T.</span> <span style="color:var(--muted);font-size:.72rem;">★ 4.8 passenger · Verified</span></div>
@@ -176,16 +176,16 @@
     </div>
     <div class="req-meta">
       <span>📍 Pickup: <b>18 Knutsford Blvd</b></span>
-      <span>🏁 Drop: <b>Norman Manley Airport</b></span>
+      <span>🏁 Drop: <b>Argyle Airport</b></span>
       <span>📏 <b>14.2 km</b></span>
       <span>⏱ ~28 min</span>
-      <span>💵 Fare: <b>$3,200 JMD</b></span>
+      <span>💵 Fare: <b>EC$55</b></span>
       <span>🚗 Type: <b>Standard</b></span>
     </div>
     <div class="req-btns">
-      <button class="btn-accept" onclick="acceptRide('req1','New Kingston → Norman Manley Airport','$3,200')">✅ Accept Ride</button>
+      <button class="btn-accept" onclick="acceptRide('req1','Arnos Vale → Argyle Airport','EC$55')">✅ Accept Ride</button>
       <button class="btn-decline" onclick="declineRide('req1')">✕ Decline</button>
-      <button class="btn-decline" onclick="openDetails('New Kingston','Norman Manley Airport','Jody-Ann T.','14.2 km','28 min','$3,200 JMD','Standard','★ 4.8')">📋 Details</button>
+      <button class="btn-decline" onclick="openDetails('Arnos Vale','Argyle Airport','Jody-Ann T.','14.2 km','28 min','EC$55','Standard','★ 4.8')">📋 Details</button>
     </div>
   </div>
 
@@ -196,24 +196,24 @@
       <span class="badge b-b">New Request</span>
     </div>
     <div class="timer-bar"><div class="timer-fill" id="timer2" style="width:100%;background:var(--accent2);"></div></div>
-    <div class="req-route">Halfway Tree → Spanish Town</div>
+    <div class="req-route">Calliaqua → Georgetown</div>
     <div class="req-passenger">
       <div class="pass-av">👨🏾</div>
       <div style="flex:1;"><span style="font-weight:500;">Devon P.</span> <span style="color:var(--muted);font-size:.72rem;">★ 5.0 passenger · Verified</span></div>
       <span class="badge b-b">Trusted Contacts: 2</span>
     </div>
     <div class="req-meta">
-      <span>📍 Pickup: <b>Half Way Tree Clock</b></span>
-      <span>🏁 Drop: <b>Spanish Town Square</b></span>
+      <span>📍 Pickup: <b>Calliaqua Clock</b></span>
+      <span>🏁 Drop: <b>Georgetown Square</b></span>
       <span>📏 <b>18.5 km</b></span>
       <span>⏱ ~35 min</span>
-      <span>💵 Fare: <b>$1,800 JMD</b></span>
+      <span>💵 Fare: <b>EC$31</b></span>
       <span>🚗 Type: <b>Standard</b></span>
     </div>
     <div class="req-btns">
-      <button class="btn-accept" onclick="acceptRide('req2','Halfway Tree → Spanish Town','$1,800')">✅ Accept Ride</button>
+      <button class="btn-accept" onclick="acceptRide('req2','Calliaqua → Georgetown','EC$31')">✅ Accept Ride</button>
       <button class="btn-decline" onclick="declineRide('req2')">✕ Decline</button>
-      <button class="btn-decline" onclick="openDetails('Halfway Tree','Spanish Town','Devon P.','18.5 km','35 min','$1,800 JMD','Standard','★ 5.0')">📋 Details</button>
+      <button class="btn-decline" onclick="openDetails('Calliaqua','Georgetown','Devon P.','18.5 km','35 min','EC$31','Standard','★ 5.0')">📋 Details</button>
     </div>
   </div>
 

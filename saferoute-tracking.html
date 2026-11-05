@@ -426,7 +426,25 @@
     .map-area { height:55vh; }
     .side-panel { height:45vh; }
   }
+
+  /* ── Leaflet map ── */
+  #map { position:absolute; inset:0; z-index:0; background:#080f14; }
+  #map .leaflet-tile-pane { filter: invert(100%) hue-rotate(180deg) brightness(.92) contrast(.88) saturate(.6); }
+  .map-overlay-tl, .zoom-controls, .sos-btn, .loc-btn { z-index: 1000 !important; }
+  .leaflet-control-attribution { background: rgba(7,9,15,.75) !important; color: var(--muted) !important; font-size: 10px; }
+  .leaflet-control-attribution a { color: var(--accent2) !important; }
+  .sr-pin { display:flex; align-items:center; justify-content:center; font-size:1.4rem; background:none; border:none; }
+  .sr-car { font-size:1.6rem; filter: drop-shadow(0 0 6px rgba(0,229,160,.7)); }
+  .sr-pickup { width:14px; height:14px; border-radius:50%; background:var(--accent); box-shadow:0 0 0 4px rgba(0,229,160,.25); }
+  .sr-me { width:18px; height:18px; border-radius:50%; background:#0080ff; border:3px solid #fff; box-shadow:0 0 0 6px rgba(0,128,255,.25); }
+  .leaflet-tooltip.sr-label, .leaflet-tooltip { background:rgba(7,9,15,.92) !important; color:var(--text) !important; border:1px solid var(--border) !important; box-shadow:none !important; font-family:'DM Sans',sans-serif; font-size:.72rem; font-weight:600; }
+  .leaflet-tooltip-top::before { border-top-color: rgba(7,9,15,.92) !important; }
+  .sr-label::before { display:none; }
+  .loc-btn { position:absolute; bottom:2rem; left:1rem; background:rgba(7,9,15,.88); border:1px solid var(--border); border-radius:10px; color:var(--text); padding:.55rem .85rem; font-size:.78rem; font-family:'DM Sans',sans-serif; cursor:pointer; }
+  .loc-btn.on { border-color:var(--accent2); color:var(--accent2); }
+  .sos-btn { bottom: 5rem !important; }
 </style>
+<link rel="stylesheet" href="assets/vendor/leaflet/leaflet.css"/>
 </head>
 <body>
 
@@ -451,7 +469,7 @@
 
   <!-- MAP -->
   <div class="map-area">
-    <canvas id="mapCanvas"></canvas>
+    <div id="map" role="region" aria-label="Live map of your trip"></div>
 
     <!-- Top-left chips -->
     <div class="map-overlay-tl">
@@ -467,14 +485,12 @@
       </div>
       <div class="map-chip">
         <span class="chip-label">Accuracy</span>
-        <span class="chip-val chip-accent">±4m</span>
+        <span class="chip-val chip-accent" id="accVal">—</span>
       </div>
     </div>
 
-    <!-- Driver ping -->
-    <div class="driver-ping" id="driverPing" style="left:45%;top:50%;">
-      <div class="ping-ring"></div>
-    </div>
+    <!-- Real GPS -->
+    <button class="loc-btn" id="locBtn" onclick="SRTrack.locate()">📡 Use my location</button>
 
     <!-- Zoom -->
     <div class="zoom-controls">
@@ -504,7 +520,7 @@
           </div>
           <div class="pt-text">
             <div class="pt-label">Picked Up</div>
-            <div class="pt-sublabel">New Kingston — 2:14 PM</div>
+            <div class="pt-sublabel">Arnos Vale — 2:14 PM</div>
           </div>
         </div>
         <div class="pt-item">
@@ -514,7 +530,7 @@
           </div>
           <div class="pt-text">
             <div class="pt-label" style="color:var(--accent2)">En Route</div>
-            <div class="pt-sublabel">Heading to Downtown Kingston</div>
+            <div class="pt-sublabel">Heading to Kingstown</div>
           </div>
         </div>
         <div class="pt-item">
@@ -523,7 +539,7 @@
           </div>
           <div class="pt-text">
             <div class="pt-label" style="color:var(--muted)">Destination</div>
-            <div class="pt-sublabel">Downtown Kingston — ETA 8 min</div>
+            <div class="pt-sublabel" id="destEta">Kingstown — ETA 8 min</div>
           </div>
         </div>
       </div>
@@ -551,7 +567,7 @@
         <div class="driver-avatar">👨🏽‍✈️</div>
         <div style="flex:1;">
           <div class="driver-name">Marcus T.</div>
-          <div class="driver-plate">PBM 4421</div>
+          <div class="driver-plate">H 4421</div>
         </div>
         <div class="driver-rating">★ 4.9</div>
       </div>
@@ -627,6 +643,8 @@
   <span class="toast-text" id="toastText"></span>
 </div>
 
+<script src="assets/vendor/leaflet/leaflet.js"></script>
+<script src="assets/tracking.js"></script>
 <script>
 /* ── Cursor ── */
 const cur  = document.getElementById('cursor');
@@ -650,215 +668,9 @@ function updateClock() {
 updateClock();
 setInterval(updateClock, 1000);
 
-/* ── Canvas Map ── */
-const canvas = document.getElementById('mapCanvas');
-const ctx    = canvas.getContext('2d');
-let zoom = 1;
-let carX, carY;
-let routePoints = [];
-let routeProgress = 0;
-let animFrame;
-
-function resizeCanvas() {
-  canvas.width  = canvas.offsetWidth;
-  canvas.height = canvas.offsetHeight;
-  buildRoute();
-}
-
-function buildRoute() {
-  const W = canvas.width, H = canvas.height;
-  // Bezier route from left to right
-  routePoints = [];
-  const steps = 120;
-  for(let i=0;i<=steps;i++) {
-    const t = i/steps;
-    // Cubic bezier
-    const x = (1-t)**3*(W*0.08) + 3*(1-t)**2*t*(W*0.35) + 3*(1-t)*t**2*(W*0.65) + t**3*(W*0.92);
-    const y = (1-t)**3*(H*0.75) + 3*(1-t)**2*t*(H*0.2)  + 3*(1-t)*t**2*(H*0.8)  + t**3*(H*0.35);
-    routePoints.push({x,y});
-  }
-  if(!carX) { carX = routePoints[0].x; carY = routePoints[0].y; }
-}
-
-function drawMap() {
-  const W = canvas.width, H = canvas.height;
-  ctx.clearRect(0,0,W,H);
-
-  // Background
-  ctx.fillStyle = '#080f14';
-  ctx.fillRect(0,0,W,H);
-
-  // Grid
-  ctx.strokeStyle = 'rgba(30,37,53,0.6)';
-  ctx.lineWidth = 1;
-  const gSize = 50;
-  for(let x=0;x<W;x+=gSize) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke(); }
-  for(let y=0;y<H;y+=gSize) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); }
-
-  // "Roads" — decorative background lines
-  const roads = [
-    [[W*0,H*0.3],[W*0.4,H*0.3],[W*0.6,H*0.5],[W*1,H*0.45]],
-    [[W*0.2,H*0],[W*0.25,H*0.4],[W*0.3,H*1]],
-    [[W*0.5,H*0],[W*0.55,H*0.5],[W*0.6,H*1]],
-    [[W*0.7,H*0],[W*0.72,H*0.3],[W*0.75,H*1]],
-    [[W*0,H*0.65],[W*0.5,H*0.65],[W*1,H*0.6]],
-  ];
-  roads.forEach(pts => {
-    ctx.beginPath();
-    ctx.moveTo(pts[0][0],pts[0][1]);
-    for(let i=1;i<pts.length;i++) ctx.lineTo(pts[i][0],pts[i][1]);
-    ctx.strokeStyle = 'rgba(30,40,60,0.9)';
-    ctx.lineWidth = 12;
-    ctx.stroke();
-    ctx.strokeStyle = 'rgba(40,55,80,0.6)';
-    ctx.lineWidth = 10;
-    ctx.stroke();
-  });
-
-  // Blocks (fake buildings)
-  const blocks = [
-    [W*0.08,H*0.1,70,50],[W*0.2,H*0.08,55,60],[W*0.4,H*0.05,80,45],
-    [W*0.62,H*0.1,65,55],[W*0.78,H*0.08,50,60],[W*0.88,H*0.12,60,40],
-    [W*0.05,H*0.72,75,50],[W*0.22,H*0.75,60,45],[W*0.42,H*0.72,70,50],
-    [W*0.63,H*0.7,55,50],[W*0.8,H*0.74,65,45],
-  ];
-  blocks.forEach(([x,y,w,h]) => {
-    ctx.fillStyle = 'rgba(13,17,30,0.8)';
-    ctx.strokeStyle = 'rgba(30,37,53,0.5)';
-    ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.rect(x,y,w,h); ctx.fill(); ctx.stroke();
-    // window lights
-    for(let r=0;r<3;r++) for(let c=0;c<4;c++) {
-      if(Math.random()>0.4) {
-        ctx.fillStyle = `rgba(${Math.random()>0.5?'0,229,160':'0,128,255'},0.15)`;
-        ctx.fillRect(x+5+c*14, y+5+r*13, 8, 8);
-      }
-    }
-  });
-
-  // Full route (dim)
-  if(routePoints.length>1) {
-    ctx.beginPath();
-    ctx.moveTo(routePoints[0].x, routePoints[0].y);
-    routePoints.forEach(p => ctx.lineTo(p.x, p.y));
-    ctx.strokeStyle = 'rgba(0,128,255,0.2)';
-    ctx.lineWidth = 4;
-    ctx.setLineDash([8,6]);
-    ctx.stroke();
-    ctx.setLineDash([]);
-
-    // Traveled portion
-    const prog = Math.floor(routeProgress);
-    if(prog > 0) {
-      ctx.beginPath();
-      ctx.moveTo(routePoints[0].x, routePoints[0].y);
-      for(let i=1;i<=prog && i<routePoints.length;i++) ctx.lineTo(routePoints[i].x, routePoints[i].y);
-      ctx.strokeStyle = 'rgba(0,229,160,0.7)';
-      ctx.lineWidth = 4;
-      ctx.stroke();
-    }
-  }
-
-  // Origin marker
-  const orig = routePoints[0];
-  if(orig) {
-    ctx.beginPath(); ctx.arc(orig.x, orig.y, 8, 0, Math.PI*2);
-    ctx.fillStyle = 'rgba(0,128,255,0.3)'; ctx.fill();
-    ctx.beginPath(); ctx.arc(orig.x, orig.y, 5, 0, Math.PI*2);
-    ctx.fillStyle = '#0080ff'; ctx.fill();
-  }
-
-  // Destination marker
-  const dest = routePoints[routePoints.length-1];
-  if(dest) {
-    // Pulse ring
-    const pulse = (Date.now()%2000)/2000;
-    ctx.beginPath(); ctx.arc(dest.x, dest.y, 8+pulse*14, 0, Math.PI*2);
-    ctx.strokeStyle = `rgba(255,71,87,${0.5-pulse*0.5})`; ctx.lineWidth=2; ctx.stroke();
-    ctx.beginPath(); ctx.arc(dest.x, dest.y, 8, 0, Math.PI*2);
-    ctx.fillStyle = 'rgba(255,71,87,0.3)'; ctx.fill();
-    ctx.beginPath(); ctx.arc(dest.x, dest.y, 5, 0, Math.PI*2);
-    ctx.fillStyle = '#ff4757'; ctx.fill();
-    // Label
-    ctx.fillStyle = 'rgba(7,9,15,0.85)';
-    ctx.strokeStyle = 'rgba(255,71,87,0.4)';
-    ctx.lineWidth = 1;
-    roundRect(ctx, dest.x-48, dest.y-34, 96, 22, 6);
-    ctx.fill(); ctx.stroke();
-    ctx.fillStyle = '#ff4757';
-    ctx.font = '500 11px DM Sans';
-    ctx.textAlign = 'center';
-    ctx.fillText('📍 Downtown Kingston', dest.x, dest.y-18);
-  }
-
-  // Car marker
-  const p = routeProgress;
-  const idx = Math.floor(p);
-  if(idx < routePoints.length) {
-    carX = routePoints[idx].x;
-    carY = routePoints[idx].y;
-  }
-  // GPS accuracy circle
-  const t = Date.now()/1000;
-  const r = 22 + Math.sin(t*2)*4;
-  ctx.beginPath(); ctx.arc(carX, carY, r, 0, Math.PI*2);
-  ctx.fillStyle = 'rgba(0,229,160,0.06)'; ctx.fill();
-  ctx.strokeStyle = 'rgba(0,229,160,0.2)'; ctx.lineWidth=1.5; ctx.stroke();
-
-  // Car emoji via canvas
-  ctx.font = '22px serif';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillText('🚕', carX, carY);
-
-  // Update DOM pin position too
-  const rect = canvas.getBoundingClientRect();
-  const mapW = canvas.offsetWidth;
-  const mapH = canvas.offsetHeight;
-  const pin = document.getElementById('driverPing');
-  pin.style.left = (carX/canvas.width*100)+'%';
-  pin.style.top  = (carY/canvas.height*100)+'%';
-  pin.style.display = 'none'; // using canvas car instead
-
-  animFrame = requestAnimationFrame(drawMap);
-}
-
-function roundRect(ctx, x, y, w, h, r) {
-  ctx.beginPath();
-  ctx.moveTo(x+r,y);
-  ctx.lineTo(x+w-r,y); ctx.quadraticCurveTo(x+w,y,x+w,y+r);
-  ctx.lineTo(x+w,y+h-r); ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
-  ctx.lineTo(x+r,y+h); ctx.quadraticCurveTo(x,y+h,x,y+h-r);
-  ctx.lineTo(x,y+r); ctx.quadraticCurveTo(x,y,x+r,y);
-  ctx.closePath();
-}
-
-/* ── Animate car along route ── */
+/* ── Trip movement, distance and ETA live in assets/tracking.js ── */
 let rideActive = true;
 let elapsed = 6;
-const TOTAL_MIN = 14;
-
-function animateCar() {
-  if(!rideActive) return;
-  const maxProgress = routePoints.length - 1;
-  routeProgress = Math.min(routeProgress + 0.12, maxProgress);
-  const pct = routeProgress / maxProgress;
-
-  // Update ETA
-  const etaLeft = Math.max(0, Math.round((1-pct)*8));
-  const distLeft = ((1-pct)*3.2).toFixed(1);
-  const speed = Math.round(35 + Math.sin(routeProgress*0.3)*15);
-  document.getElementById('etaMin').innerHTML  = etaLeft  + '<span class="unit"> min</span>';
-  document.getElementById('etaDist').innerHTML = distLeft + '<span class="unit"> km</span>';
-  document.getElementById('speedVal').textContent = speed;
-  document.getElementById('distVal').textContent  = distLeft;
-
-  if(routeProgress >= maxProgress) {
-    rideActive = false;
-    setTimeout(showArrivalModal, 800);
-  }
-}
-setInterval(animateCar, 150);
 
 // Elapsed timer
 setInterval(() => {
@@ -866,24 +678,6 @@ setInterval(() => {
   elapsed++;
   document.getElementById('elapsedMin').innerHTML = elapsed + '<span class="unit"> min</span>';
 }, 60000);
-
-/* ── GPS Log ── */
-const gpsLog = document.getElementById('gpsLog');
-function addLogEntry() {
-  if(!rideActive) return;
-  const lat  = (17.9712 + (Math.random()-0.5)*0.002).toFixed(6);
-  const lng  = (-76.7928 + (Math.random()-0.5)*0.002).toFixed(6);
-  const speed= Math.round(35+Math.random()*20);
-  const now  = new Date();
-  const time = now.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
-  const entry = document.createElement('div');
-  entry.className = 'log-entry';
-  entry.innerHTML = `<span class="log-time">${time}</span><span class="log-coords">${lat}, ${lng}</span><span class="log-speed">${speed}km/h</span>`;
-  gpsLog.insertBefore(entry, gpsLog.firstChild);
-  if(gpsLog.children.length > 8) gpsLog.removeChild(gpsLog.lastChild);
-}
-addLogEntry();
-setInterval(addLogEntry, 3000);
 
 /* ── Toggle sharing ── */
 function toggleSharing() {
@@ -894,10 +688,7 @@ function toggleSharing() {
 }
 
 /* ── Zoom ── */
-function adjustZoom(dir) {
-  zoom = Math.max(0.5, Math.min(2, zoom + dir*0.2));
-  showToast('🔍', `Zoom: ${Math.round(zoom*100)}%`);
-}
+function adjustZoom(dir) { if (window.SRTrack) SRTrack.zoom(dir); }
 
 /* ── SOS ── */
 // triggerSOS() lives in assets/saferoute.js: call buttons for police and ambulance, plus a real GPS location share.
@@ -905,8 +696,7 @@ function adjustZoom(dir) {
 /* ── End ride ── */
 function endRide() {
   rideActive = false;
-  routeProgress = routePoints.length - 1;
-  setTimeout(showArrivalModal, 400);
+  if (window.SRTrack) SRTrack.finish(); // the map shows the arrival message when the taxi reaches the end
 }
 
 /* ── Arrival modal ── */
@@ -929,9 +719,6 @@ function showToast(icon, text) {
 }
 
 /* ── Init ── */
-window.addEventListener('resize', () => { resizeCanvas(); });
-resizeCanvas();
-drawMap();
 </script>
 <script src="assets/saferoute.js"></script>
 </body>

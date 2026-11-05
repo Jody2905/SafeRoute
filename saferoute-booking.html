@@ -376,7 +376,7 @@
             <label>Pickup Location</label>
             <div class="input-wrap">
               <span class="iicon">📍</span>
-              <input type="text" id="pickup" placeholder="New Kingston, St. Andrew" value="New Kingston, St. Andrew"/>
+              <input type="text" id="pickup" placeholder="Arnos Vale, St. George" value="Arnos Vale, St. George"/>
             </div>
           </div>
           <div class="loc-connector"></div>
@@ -384,7 +384,7 @@
             <label>Destination</label>
             <div class="input-wrap">
               <span class="iicon">🏁</span>
-              <input type="text" id="destination" placeholder="Downtown Kingston" value="Downtown Kingston"/>
+              <input type="text" id="destination" placeholder="Kingstown" value="Kingstown"/>
             </div>
           </div>
         </div>
@@ -393,10 +393,10 @@
         <div>
           <div style="font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.5rem;font-weight:600;">Quick Destinations</div>
           <div style="display:flex;gap:.5rem;flex-wrap:wrap;">
-            <div class="contact-chip" onclick="setDest('Norman Manley Airport')">✈ Airport</div>
-            <div class="contact-chip" onclick="setDest('University of the West Indies')">🎓 UWI</div>
-            <div class="contact-chip" onclick="setDest('Portmore Mall')">🛍 Portmore Mall</div>
-            <div class="contact-chip" onclick="setDest('Half Way Tree')">🚉 Half Way Tree</div>
+            <div class="contact-chip" onclick="setDest('Argyle Airport')">✈ Airport</div>
+            <div class="contact-chip" onclick="setDest('University of the West Indies')">🎓 SVGCC</div>
+            <div class="contact-chip" onclick="setDest('Layou')">🛍 Layou</div>
+            <div class="contact-chip" onclick="setDest('Calliaqua')">🚉 Calliaqua</div>
           </div>
         </div>
 
@@ -434,50 +434,50 @@
       <div class="form-section-title">Choose your ride</div>
       <div class="form-section-sub">Select the option that best suits your needs.</div>
       <div class="ride-types" style="margin-top:1rem;" id="rideTypes">
-        <div class="ride-type-card selected" data-fare="850" onclick="selectRide(this,850,'Standard')">
+        <div class="ride-type-card selected" data-fare="20" onclick="selectRide(this,20,'Standard')">
           <div class="rt-icon">🚕</div>
           <div class="rt-body">
             <div class="rt-name">Standard <span class="rt-badge badge-safe">Most Popular</span></div>
             <div class="rt-desc">Reliable everyday taxi · up to 4 passengers</div>
           </div>
           <div class="rt-price">
-            <div class="rt-fare">$850</div>
+            <div class="rt-fare">EC$20</div>
             <div class="rt-eta">~8 min away</div>
           </div>
           <div class="rt-check"></div>
         </div>
-        <div class="ride-type-card" data-fare="1400" onclick="selectRide(this,1400,'Comfort')">
+        <div class="ride-type-card" data-fare="30" onclick="selectRide(this,30,'Comfort')">
           <div class="rt-icon">🚙</div>
           <div class="rt-body">
             <div class="rt-name">Comfort <span class="rt-badge badge-pop">New</span></div>
             <div class="rt-desc">Premium sedan · A/C · extra legroom</div>
           </div>
           <div class="rt-price">
-            <div class="rt-fare">$1,400</div>
+            <div class="rt-fare">EC$30</div>
             <div class="rt-eta">~12 min away</div>
           </div>
           <div class="rt-check"></div>
         </div>
-        <div class="ride-type-card" data-fare="2200" onclick="selectRide(this,2200,'Executive')">
+        <div class="ride-type-card" data-fare="45" onclick="selectRide(this,45,'Executive')">
           <div class="rt-icon">🏎</div>
           <div class="rt-body">
             <div class="rt-name">Executive</div>
             <div class="rt-desc">Top-rated drivers · luxury vehicle</div>
           </div>
           <div class="rt-price">
-            <div class="rt-fare">$2,200</div>
+            <div class="rt-fare">EC$45</div>
             <div class="rt-eta">~18 min away</div>
           </div>
           <div class="rt-check"></div>
         </div>
-        <div class="ride-type-card" data-fare="400" onclick="selectRide(this,400,'ShareRide')">
+        <div class="ride-type-card" data-fare="8" onclick="selectRide(this,8,'ShareRide')">
           <div class="rt-icon">🚐</div>
           <div class="rt-body">
             <div class="rt-name">ShareRide</div>
             <div class="rt-desc">Split cost with nearby passengers · eco-friendly</div>
           </div>
           <div class="rt-price">
-            <div class="rt-fare">$400</div>
+            <div class="rt-fare">EC$8</div>
             <div class="rt-eta">~6 min away</div>
           </div>
           <div class="rt-check"></div>
@@ -557,12 +557,12 @@
           <div style="display:flex;flex-direction:column;gap:.5rem;">
             <div style="display:flex;align-items:center;gap:.6rem;font-size:.83rem;">
               <span style="width:8px;height:8px;border-radius:50%;background:var(--accent2);flex-shrink:0;"></span>
-              <span id="cfPickup">New Kingston, St. Andrew</span>
+              <span id="cfPickup">Arnos Vale, St. George</span>
             </div>
             <div style="width:2px;height:16px;background:linear-gradient(180deg,var(--accent2),var(--danger));margin-left:3px;"></div>
             <div style="display:flex;align-items:center;gap:.6rem;font-size:.83rem;">
               <span style="width:8px;height:8px;border-radius:50%;background:var(--danger);flex-shrink:0;"></span>
-              <span id="cfDest">Downtown Kingston</span>
+              <span id="cfDest">Kingstown</span>
             </div>
           </div>
         </div>
@@ -571,9 +571,9 @@
         <div class="fare-summary" id="fareSummary">
           <div class="fare-row"><span class="label">Ride type</span><span class="value" id="cfType">Standard</span></div>
           <div class="fare-row"><span class="label">Distance</span><span class="value">3.2 km</span></div>
-          <div class="fare-row"><span class="label">Base fare</span><span class="value" id="cfBase">$850 JMD</span></div>
-          <div class="fare-row"><span class="label">SafeRoute fee</span><span class="value">$50 JMD</span></div>
-          <div class="fare-row total"><span class="label">Total</span><span class="value" id="cfTotal">$900 JMD</span></div>
+          <div class="fare-row"><span class="label">Base fare</span><span class="value" id="cfBase">EC$20</span></div>
+          <div class="fare-row"><span class="label">SafeRoute fee</span><span class="value">EC$2</span></div>
+          <div class="fare-row total"><span class="label">Total</span><span class="value" id="cfTotal">EC$22</span></div>
         </div>
 
         <!-- Privacy summary -->
@@ -617,8 +617,8 @@
 
   <div class="route-overlay">
     <div class="ro-title">Route Preview</div>
-    <div class="ro-row"><div class="ro-dot pickup"></div><div><div class="ro-text ro-stat" id="roPickup">New Kingston</div><div class="ro-sub">Your pickup</div></div></div>
-    <div class="ro-row"><div class="ro-dot dest"></div><div><div class="ro-text ro-stat" id="roDest">Downtown Kingston</div><div class="ro-sub">Your destination</div></div></div>
+    <div class="ro-row"><div class="ro-dot pickup"></div><div><div class="ro-text ro-stat" id="roPickup">Arnos Vale</div><div class="ro-sub">Your pickup</div></div></div>
+    <div class="ro-row"><div class="ro-dot dest"></div><div><div class="ro-text ro-stat" id="roDest">Kingstown</div><div class="ro-sub">Your destination</div></div></div>
     <div class="ro-row" style="margin-top:.75rem;padding-top:.75rem;border-top:1px solid var(--border);">
       <div class="ro-dot driver"></div><div><div class="ro-text ro-stat">3 drivers nearby</div><div class="ro-sub">Closest: ~4 min</div></div>
     </div>
@@ -629,7 +629,7 @@
     <div class="ep-div"></div>
     <div class="ep-item"><span class="ep-val">3.2<span style="font-size:.7rem">km</span></span><span class="ep-key">Distance</span></div>
     <div class="ep-div"></div>
-    <div class="ep-item"><span class="ep-val" id="fareDisplay">$850</span><span class="ep-key">Fare</span></div>
+    <div class="ep-item"><span class="ep-val" id="fareDisplay">EC$20</span><span class="ep-key">Fare</span></div>
   </div>
 </div>
 
@@ -643,7 +643,7 @@
       <div class="mdc-avatar">👨🏽‍✈️</div>
       <div>
         <div class="mdc-name">Marcus T.</div>
-        <div class="mdc-plate">PBM 4421 · Toyota Corolla · ★ 4.9</div>
+        <div class="mdc-plate">H 4421 · Toyota Corolla · ★ 4.9</div>
       </div>
       <div class="mdc-eta">
         <div class="mdc-eta-val">4<span style="font-size:.7rem">min</span></div>
@@ -675,7 +675,7 @@ document.querySelectorAll('a,button,input,select,.ride-type-card,.contact-chip,.
 
 /* ── State ── */
 let currentStep = 1;
-let selectedFare = 850;
+let selectedFare = 20;
 let selectedType = 'Standard';
 
 /* ── Helpers ── */
@@ -689,8 +689,8 @@ function selectRide(el, fare, type) {
   el.classList.add('selected');
   selectedFare = fare;
   selectedType = type;
-  document.getElementById('fareDisplay').textContent = '$'+fare.toLocaleString();
-  showToast('🚕', type+' ride selected — $'+fare+' JMD');
+  document.getElementById('fareDisplay').textContent = 'EC$'+fare.toLocaleString();
+  showToast('🚕', type+' ride selected — EC$'+fare);
 }
 
 /* ── Step navigation ── */
@@ -717,8 +717,8 @@ function advanceStep() {
     document.getElementById('cfPickup').textContent = document.getElementById('pickup').value;
     document.getElementById('cfDest').textContent   = document.getElementById('destination').value;
     document.getElementById('cfType').textContent   = selectedType;
-    document.getElementById('cfBase').textContent   = '$'+selectedFare.toLocaleString()+' JMD';
-    document.getElementById('cfTotal').textContent  = '$'+(selectedFare+50).toLocaleString()+' JMD';
+    document.getElementById('cfBase').textContent   = 'EC$'+selectedFare.toLocaleString();
+    document.getElementById('cfTotal').textContent  = 'EC$'+(selectedFare+2).toLocaleString();
     document.getElementById('btnText').textContent  = '✅ Confirm Booking';
   } else {
     document.getElementById('btnText').textContent = currentStep===3?'Review Booking →':'Continue →';

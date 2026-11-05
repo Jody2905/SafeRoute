@@ -2,7 +2,7 @@
 
 **Live site:** https://jody2905.github.io/SafeRoute/
 
-SafeRoute is a front-end prototype of a ride-hailing app built around passenger and driver safety: live GPS trip tracking, trusted contacts, an SOS button, privacy controls and verified drivers. It has two sides:
+SafeRoute is a front-end prototype of a ride-hailing app for St. Vincent and the Grenadines, built around passenger and driver safety: live GPS trip tracking, trusted contacts, an SOS button, privacy controls and verified drivers. It has two sides:
 
 - **Passenger:** dashboard, booking, live tracking, trip history, trusted contacts, privacy settings, notifications, profile, payments, reviews, settings
 - **Driver:** dashboard, ride requests, live map, trip history, earnings, performance, messages, settings
@@ -11,13 +11,14 @@ Start at the landing page, then sign in with any email and password (the sign-in
 
 ## Safety features
 
-- **SOS sheet** on the live tracking page: one tap to call the police (119) or an ambulance (110), and a **Share my live location** button that reads your real GPS position with the browser's Geolocation API and shares a map link through the phone's share menu (or copies it).
+- **SOS sheet** on the live tracking page: one tap to call emergency services (911 or 999 in St. Vincent and the Grenadines), and a **Share my live location** button that reads your real GPS position with the browser's Geolocation API and shares a map link through the phone's share menu (or copies it).
+- **Real map and GPS** on the tracking page: an OpenStreetMap map of St. Vincent (Leaflet), a real road route from Arnos Vale to Kingstown (OSRM routing, with a built-in fallback), a taxi that moves along it with live distance and ETA, and a **Use my location** button that shows your phone's real position, accuracy and speed.
 - Trusted contacts, trip sharing and privacy controls for what drivers can see.
 - Driver verification status (licence, insurance, vehicle fitness, background check).
 
 ## Tech
 
-Plain HTML, CSS and JavaScript, no build step. `assets/saferoute.js` is shared by every page: the phone menu, keyboard access for the sidebar, touch-screen cursor fix and the SOS sheet.
+Plain HTML, CSS and JavaScript, no build step. Maps use [Leaflet](https://leafletjs.com) (bundled in `assets/vendor/leaflet`) with © OpenStreetMap contributors map data; routes come from the public [OSRM](https://project-osrm.org) demo server. `assets/tracking.js` runs the live map. `assets/saferoute.js` is shared by every page: the phone menu, keyboard access for the sidebar, touch-screen cursor fix and the SOS sheet.
 
 ## Publish on GitHub Pages
 
@@ -27,7 +28,7 @@ Plain HTML, CSS and JavaScript, no build step. `assets/saferoute.js` is shared b
 
 ## Status
 
-This is a front-end prototype. Bookings, payments, messages and sign-in use sample data and don't save anything. All people, plates and trips are fictional.
+This is a front-end prototype. Bookings, payments, messages and sign-in use sample data and don't save anything. All people, plates and trips are fictional. Prices are in EC$.
 
 ## Author
 

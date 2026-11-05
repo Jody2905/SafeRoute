@@ -3,8 +3,8 @@
    - Touch screens: hide the custom cursor dot (it has no mouse to follow) and restore the normal cursor.
    - SOS: an honest emergency sheet with a real call button and a real "share my location" link. */
 (function () {
-  // Emergency numbers for Jamaica, where the demo trips are set. Change these if you move the setting.
-  var EMERGENCY = { police: "119", ambulance: "110" };
+  // Emergency numbers for St. Vincent and the Grenadines (911 and 999 both reach police, fire and ambulance).
+  var EMERGENCY = { main: "911", alt: "999" };
 
   var css = document.createElement("style");
   css.textContent = [
@@ -94,9 +94,9 @@
     sheet.setAttribute("aria-label", "Emergency");
     sheet.innerHTML =
       '<div><h2>🆘 Emergency</h2>' +
-      "<p>If you are in danger, call the police now. You can also send your exact GPS location to someone you trust.</p>" +
-      '<a class="sr-call" href="tel:' + EMERGENCY.police + '">📞 Call police (' + EMERGENCY.police + ")</a>" +
-      '<a href="tel:' + EMERGENCY.ambulance + '">🚑 Ambulance / fire (' + EMERGENCY.ambulance + ")</a>" +
+      "<p>If you are in danger, call emergency services now. You can also send your exact GPS location to someone you trust.</p>" +
+      '<a class="sr-call" href="tel:' + EMERGENCY.main + '">📞 Call ' + EMERGENCY.main + " (police, fire, ambulance)</a>" +
+      '<a href="tel:' + EMERGENCY.alt + '">📞 Or call ' + EMERGENCY.alt + "</a>" +
       '<button type="button" data-act="share">📍 Share my live location</button>' +
       '<button type="button" data-act="close">Cancel</button>' +
       '<small data-status>Demo app: SafeRoute does not contact the police or your trusted contacts by itself yet.</small></div>';
