@@ -262,16 +262,17 @@ let tt;function showToast(i,t){const el=document.getElementById('toastEl');docum
 // Timer countdown
 let t1=12,t2=15;
 setInterval(()=>{
-  if(t1>0){t1--;document.getElementById('timer1').style.width=(t1/15*100)+'%';}
+  if(t1>0){t1--;const b1=document.getElementById('timer1');if(b1)b1.style.width=(t1/15*100)+'%';}
   const el=document.querySelector('#req1 .badge');if(el&&t1>0)el.textContent='⏱ '+t1+'s left';
   if(t1<=0&&document.getElementById('req1'))declineRide('req1');
-  if(t2>0){t2--;document.getElementById('timer2').style.width=(t2/15*100)+'%';}
+  if(t2>0){t2--;const b2=document.getElementById('timer2');if(b2)b2.style.width=(t2/15*100)+'%';}
 },1000);
 function acceptRide(id,route,fare){
   const el=document.getElementById(id);
   if(el){el.style.opacity='0';el.style.transform='translateX(30px)';el.style.transition='all .4s';setTimeout(()=>el.remove(),400);}
-  showToast('✅','Ride accepted: '+route+' — '+fare);
-  setTimeout(()=>go('saferoute-tracking.html'),1500);
+  showToast('✅','Ride accepted: '+route+' — '+fare+'. Ask for the PIN at pickup.');
+  // At pickup the driver must enter the passenger's PIN before the trip starts.
+  setTimeout(()=>SRSafety.askPin(()=>{ showToast('🔢','PIN matched. Trip started.'); setTimeout(()=>go('saferoute-tracking.html'),1200); }),1200);
 }
 function declineRide(id){
   const el=document.getElementById(id);
@@ -289,6 +290,7 @@ function openDetails(from,to,pass,dist,time,fare,type,rating){
   document.getElementById('detailsModal').classList.add('show');
 }
 </script>
+<script src="assets/safety.js"></script>
 <script src="assets/saferoute.js"></script>
 </body>
 </html>

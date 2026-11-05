@@ -692,6 +692,8 @@ function acceptRide() {
   document.getElementById('rideAlert').remove();
   showToast('✅','Ride accepted! Head to Arnos Vale for pickup.');
   document.getElementById('tripsVal').innerHTML = '8<span class="unit"> trips</span>';
+  // At pickup the driver must enter the passenger's PIN before the trip starts.
+  setTimeout(()=>SRSafety.askPin(()=>showToast('🔢','PIN matched. Trip started, drive safe.')),1500);
 }
 function declineRide() {
   clearInterval(alertInterval);
@@ -849,6 +851,7 @@ setInterval(()=>{ li=(li+1)%locs.length; const el=document.getElementById('locTe
 function go(p){window.location.href=p;}
 function driverSignOut(){ showToast('👋','Logging out...'); setTimeout(()=>window.location.href='saferoute-auth.html',1200); }
 </script>
+<script src="assets/safety.js"></script>
 <script src="assets/saferoute.js"></script>
 </body>
 </html>

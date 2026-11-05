@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<meta name="robots" content="noindex"/>
+<title>SafeRoute – Follow a Trip</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="assets/vendor/leaflet/leaflet.css"/>
+<style>
+  :root{--bg:#07090f;--surface:#0d1117;--card:#111620;--border:#1e2535;--accent:#00e5a0;--accent2:#0080ff;--warn:#ff9f43;--danger:#ff4757;--text:#e8edf5;--muted:#6b7896;}
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+  html,body{height:100%;}
+  body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);display:flex;flex-direction:column;}
+  header{display:flex;align-items:center;justify-content:space-between;padding:.9rem 1.2rem;border-bottom:1px solid var(--border);background:var(--surface);}
+  .logo{font-family:'Syne',sans-serif;font-weight:800;font-size:1.15rem;color:var(--text);text-decoration:none;}
+  .logo span{color:var(--accent);}
+  .live{font-size:.72rem;color:var(--accent);border:1px solid rgba(0,229,160,.3);border-radius:50px;padding:.25rem .7rem;}
+  main{flex:1;display:grid;grid-template-columns:1fr 340px;min-height:0;}
+  .map-wrap{position:relative;min-height:320px;}
+  #map{position:absolute;inset:0;background:#080f14;}
+  #map .leaflet-tile-pane{filter:invert(100%) hue-rotate(180deg) brightness(.92) contrast(.88) saturate(.6);}
+  .leaflet-control-attribution{background:rgba(7,9,15,.75)!important;color:var(--muted)!important;font-size:10px;}
+  .leaflet-control-attribution a{color:var(--accent2)!important;}
+  .leaflet-tooltip{background:rgba(7,9,15,.92)!important;color:var(--text)!important;border:1px solid var(--border)!important;box-shadow:none!important;font-size:.72rem;font-weight:600;}
+  .sr-pin{display:flex;align-items:center;justify-content:center;font-size:1.4rem;}
+  .sr-car{font-size:1.6rem;filter:drop-shadow(0 0 6px rgba(0,229,160,.7));}
+  .sr-pickup{width:14px;height:14px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 4px rgba(0,229,160,.25);}
+  aside{background:var(--surface);border-left:1px solid var(--border);padding:1.3rem;overflow-y:auto;}
+  h1{font-family:'Syne',sans-serif;font-size:1.15rem;margin-bottom:.3rem;}
+  .status{font-size:.85rem;color:var(--accent);margin-bottom:1.1rem;}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:1rem;margin-bottom:1rem;}
+  .k{font-size:.62rem;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:.4rem;font-weight:600;}
+  .row{display:flex;justify-content:space-between;font-size:.82rem;padding:.35rem 0;}
+  .row span:first-child{color:var(--muted);}
+  .nums{display:grid;grid-template-columns:1fr 1fr 1fr;gap:.5rem;text-align:center;}
+  .nums b{display:block;font-family:'Syne',sans-serif;font-size:1.25rem;}
+  .nums small{font-size:.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;}
+  .help{font-size:.78rem;color:var(--muted);line-height:1.5;}
+  .call{display:block;text-align:center;margin-top:.7rem;padding:.75rem;border-radius:12px;background:rgba(255,71,87,.12);border:1px solid rgba(255,71,87,.35);color:var(--danger);text-decoration:none;font-weight:600;font-size:.85rem;}
+  .demo{font-size:.68rem;color:var(--muted);margin-top:1rem;}
+  @media(max-width:800px){main{grid-template-columns:1fr;grid-template-rows:55vh auto;}aside{border-left:0;border-top:1px solid var(--border);}}
+</style>
+</head>
+<body data-track="share">
+<header>
+  <a class="logo" href="index.html">Safe<span>Route</span></a>
+  <span class="live">● Live trip</span>
+</header>
+<main>
+  <div class="map-wrap"><div id="map" role="region" aria-label="Live map of the trip"></div></div>
+  <aside>
+    <h1>Jody-Ann is on a SafeRoute trip</h1>
+    <div class="status" id="shareStatus" aria-live="polite">Loading the trip…</div>
+
+    <div class="card">
+      <div class="nums">
+        <div><b id="etaMin">–</b><small>ETA</small></div>
+        <div><b id="distVal">–</b><small>km left</small></div>
+        <div><b id="speedVal">–</b><small>km/h</small></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="k">Trip</div>
+      <div class="row"><span>From</span><span>Arnos Vale</span></div>
+      <div class="row"><span>To</span><span id="destEta">Kingstown</span></div>
+    </div>
+
+    <div class="card">
+      <div class="k">Driver</div>
+      <div class="row"><span>Name</span><span>Marcus T. · ★ 4.9</span></div>
+      <div class="row"><span>Car</span><span>Silver Toyota Corolla</span></div>
+      <div class="row"><span>Plate</span><span>H 4421</span></div>
+      <div class="row"><span>ID check</span><span style="color:var(--accent)">✓ Verified driver</span></div>
+    </div>
+
+    <div class="card">
+      <div class="k">Worried?</div>
+      <p class="help">Call Jody-Ann first. If you can't reach her and think she's in danger, call emergency services and give them the taxi's plate and its last place on the map.</p>
+      <a class="call" href="tel:911">📞 Call 911</a>
+    </div>
+    <p class="demo">Demo: this page shows a simulated trip. The link only works while the trip is happening.</p>
+  </aside>
+</main>
+<div id="gpsLog" hidden></div>
+<script src="assets/vendor/leaflet/leaflet.js"></script>
+<script src="assets/tracking.js"></script>
+</body>
+</html>

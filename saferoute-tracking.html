@@ -445,6 +445,26 @@
   .sos-btn { bottom: 5rem !important; }
 </style>
 <link rel="stylesheet" href="assets/vendor/leaflet/leaflet.css"/>
+<style>
+  .pin-card { background:var(--surface); border:1px solid rgba(0,229,160,.25); border-radius:14px; padding:1rem; text-align:center; }
+  .pin-digits { font-family:'Syne',sans-serif; font-weight:800; font-size:2rem; letter-spacing:.35em; color:var(--accent); margin-left:.35em; }
+  .pin-help { font-size:.74rem; color:var(--muted); line-height:1.45; margin-top:.4rem; }
+  .pin-help b { color:var(--text); font-weight:600; }
+  .pin-status { font-size:.74rem; margin-top:.55rem; font-weight:600; }
+  .pin-status.ok { color:var(--accent); }
+  .pin-status.wait { color:var(--warn); }
+  .test-row { display:flex; gap:.5rem; margin-top:.7rem; }
+  .test-row .dact-btn { flex:1; }
+  .log-entry.log-alert .log-coords { color:var(--warn); }
+  .sr-alert { position:fixed; inset:0; z-index:9550; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,.65); padding:1rem; }
+  .sr-alert>div { background:#111620; border:1px solid var(--warn); border-radius:18px; padding:1.4rem; width:min(400px,100%); text-align:center; }
+  .sr-alert h2 { font-family:'Syne',sans-serif; font-size:1.05rem; color:var(--warn); margin-bottom:.45rem; }
+  .sr-alert p { font-size:.82rem; color:#9aa5bf; line-height:1.45; margin-bottom:.8rem; }
+  .sr-count { font-size:.8rem; color:var(--text); margin-bottom:.9rem; font-weight:600; }
+  .sr-alert button { display:block; width:100%; padding:.8rem; border-radius:12px; margin-bottom:.5rem; font-size:.9rem; font-weight:600; cursor:pointer; border:1px solid var(--border); background:#0d1117; color:var(--text); }
+  .sr-alert button.ok { background:var(--accent); border-color:var(--accent); color:#00140d; }
+  .sr-alert button.help { border-color:var(--danger); color:var(--danger); }
+</style>
 </head>
 <body>
 
@@ -460,7 +480,7 @@
   </div>
   <div class="topbar-right">
     <span class="top-time" id="clockDisplay">--:--</span>
-    <button class="top-btn" onclick="showToast('🔔','Trusted contacts have been notified.')">Notify Contacts</button>
+    <button class="top-btn" onclick="SRTrack.share()">Share My Trip</button>
   </div>
 </div>
 
@@ -560,6 +580,16 @@
       </div>
     </div>
 
+    <!-- Ride PIN -->
+    <div class="panel-section">
+      <div class="ps-title">Your Ride PIN</div>
+      <div class="pin-card">
+        <div class="pin-digits" id="ridePin" aria-label="Ride PIN">- - - -</div>
+        <p class="pin-help">Tell your driver this PIN. They have to enter it before the trip can start. <b>Don't get in if they can't.</b></p>
+        <div class="pin-status" id="pinStatus"></div>
+      </div>
+    </div>
+
     <!-- Driver Info -->
     <div class="panel-section">
       <div class="ps-title">Your Driver</div>
@@ -604,8 +634,19 @@
       </div>
 
       <div class="share-link-box" style="margin-top:0.75rem;">
-        <span class="share-link-text">saferoute.app/track/sr-tok-a9f2c</span>
-        <button class="copy-btn" onclick="showToast('📋','Tracking link copied!')">Copy Link</button>
+        <span class="share-link-text" id="shareLinkText">…</span>
+        <button class="copy-btn" onclick="SRTrack.share()">Share Link</button>
+      </div>
+      <p class="pin-help" style="margin-top:.5rem;">Anyone with this link can follow the taxi on a map until you arrive. It stops working when the trip ends.</p>
+    </div>
+
+    <!-- Safety alerts -->
+    <div class="panel-section">
+      <div class="ps-title">Route Alerts</div>
+      <p class="pin-help">SafeRoute checks the taxi against the planned route. If it goes more than 150 m off the route, or stops for over 3 minutes, you're asked if you're OK. No answer in 30 seconds and your trusted contacts get your live link.</p>
+      <div class="test-row">
+        <button class="dact-btn" onclick="SRTrack.simulateDetour()">🧪 Test: detour</button>
+        <button class="dact-btn" onclick="SRTrack.simulateStop()">🧪 Test: long stop</button>
       </div>
     </div>
 
@@ -644,7 +685,13 @@
 </div>
 
 <script src="assets/vendor/leaflet/leaflet.js"></script>
+<script src="assets/safety.js"></script>
 <script src="assets/tracking.js"></script>
+<script>
+(function(){var t=window.SRSafety&&SRSafety.current(30*60*1000),el=document.getElementById("pinStatus");if(!el||!t)return;
+ el.className="pin-status "+(t.pinVerified?"ok":"wait");
+ el.textContent=t.pinVerified?"✓ Your driver entered the right PIN":"Waiting for your driver to enter it";})();
+</script>
 <script>
 /* ── Cursor ── */
 const cur  = document.getElementById('cursor');

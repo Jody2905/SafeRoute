@@ -765,7 +765,7 @@ function bookRide() {
 }
 
 function closeModal() { document.getElementById('successModal').classList.remove('show'); }
-function goToTracking() { window.location.href='saferoute-tracking.html'; }
+function goToTracking() { if (window.SRSafety) SRSafety.newTrip(); window.location.href='saferoute-tracking.html'; }
 
 /* ── Toast ── */
 let toastTimer;
@@ -879,6 +879,7 @@ window.addEventListener('resize',()=>{
 });
 setTimeout(drawBgMap,100);
 </script>
+<script src="assets/safety.js"></script>
 <script src="assets/saferoute.js"></script>
 </body>
 </html>
