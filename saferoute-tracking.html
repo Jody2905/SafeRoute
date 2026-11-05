@@ -464,6 +464,11 @@
   .sr-alert button { display:block; width:100%; padding:.8rem; border-radius:12px; margin-bottom:.5rem; font-size:.9rem; font-weight:600; cursor:pointer; border:1px solid var(--border); background:#0d1117; color:var(--text); }
   .sr-alert button.ok { background:var(--accent); border-color:var(--accent); color:#00140d; }
   .sr-alert button.help { border-color:var(--danger); color:var(--danger); }
+.pickup-banner { position:absolute; top:1rem; left:50%; transform:translateX(-50%); z-index:1001; width:min(420px,calc(100% - 2rem)); background:rgba(17,22,32,.96); border:1px solid var(--warn); border-radius:14px; padding:.9rem 1rem; display:flex; flex-direction:column; gap:.35rem; font-size:.8rem; color:#c9d1e3; box-shadow:0 10px 30px rgba(0,0,0,.4); }
+  .pickup-banner > b { font-family:'Syne',sans-serif; font-size:.95rem; color:var(--warn); }
+  .pickup-banner span b { color:var(--text); }
+  .pickup-banner button { margin-top:.35rem; padding:.6rem; border-radius:10px; border:1px solid var(--border); background:#0d1117; color:var(--text); font-size:.78rem; cursor:pointer; }
+  .pickup-banner[hidden] { display:none; }
 </style>
 </head>
 <body>
@@ -499,14 +504,22 @@
         <span class="chip-label">km/h</span>
       </div>
       <div class="map-chip">
-        <span class="chip-label">Distance Left</span>
+        <span class="chip-label" id="distKey">Driver is</span>
         <span class="chip-val" id="distVal">3.2</span>
         <span class="chip-label">km</span>
       </div>
       <div class="map-chip">
         <span class="chip-label">Accuracy</span>
         <span class="chip-val chip-accent" id="accVal">—</span>
+        <span class="chip-label">m</span>
       </div>
+    </div>
+
+    <!-- Driver has arrived -->
+    <div class="pickup-banner" id="pickupBanner" hidden role="status">
+      <b>🚕 Marcus has arrived</b>
+      <span>Check the plate is <b>H 4421</b>, then tell him your PIN. He enters it on his phone to start the trip.</span>
+      <button type="button" onclick="SRTrack.driverPin()">Demo: act as the driver and enter the PIN</button>
     </div>
 
     <!-- Real GPS -->
@@ -529,37 +542,37 @@
     <div class="ride-status-card">
       <div class="rs-header">
         <span class="rs-title">Ride #SR-20486</span>
-        <span class="rs-badge">In Progress</span>
+        <span class="rs-badge" id="rideBadge">Driver en route</span>
       </div>
 
       <div class="progress-track">
         <div class="pt-item">
           <div class="pt-line-col">
-            <div class="pt-dot done"></div>
-            <div class="pt-connector done"></div>
+            <div class="pt-dot active" id="step1Dot"></div>
+            <div class="pt-connector" id="step1Line"></div>
           </div>
           <div class="pt-text">
-            <div class="pt-label">Picked Up</div>
-            <div class="pt-sublabel">Arnos Vale — 2:14 PM</div>
+            <div class="pt-label" id="step1Label">Driver on the way</div>
+            <div class="pt-sublabel" id="step1Sub">Marcus T. · H 4421</div>
           </div>
         </div>
         <div class="pt-item">
           <div class="pt-line-col">
-            <div class="pt-dot active"></div>
-            <div class="pt-connector"></div>
+            <div class="pt-dot" id="step2Dot"></div>
+            <div class="pt-connector" id="step2Line"></div>
           </div>
           <div class="pt-text">
-            <div class="pt-label" style="color:var(--accent2)">En Route</div>
-            <div class="pt-sublabel">Heading to Kingstown</div>
+            <div class="pt-label" id="step2Label" style="color:var(--muted)">Pickup</div>
+            <div class="pt-sublabel" id="step2Sub">Your location</div>
           </div>
         </div>
         <div class="pt-item">
           <div class="pt-line-col">
-            <div class="pt-dot"></div>
+            <div class="pt-dot" id="step3Dot"></div>
           </div>
           <div class="pt-text">
-            <div class="pt-label" style="color:var(--muted)">Destination</div>
-            <div class="pt-sublabel" id="destEta">Kingstown — ETA 8 min</div>
+            <div class="pt-label" id="step3Label" style="color:var(--muted)">Destination</div>
+            <div class="pt-sublabel" id="step3Sub">Kingstown</div>
           </div>
         </div>
       </div>
@@ -567,15 +580,15 @@
       <div class="eta-row">
         <div class="eta-item">
           <span class="eta-val" id="etaMin">8<span class="unit"> min</span></span>
-          <span class="eta-key">ETA</span>
+          <span class="eta-key" id="etaKey">Pickup in</span>
         </div>
         <div class="eta-item">
           <span class="eta-val" id="etaDist">3.2<span class="unit"> km</span></span>
           <span class="eta-key">Left</span>
         </div>
         <div class="eta-item">
-          <span class="eta-val" id="elapsedMin">6<span class="unit"> min</span></span>
-          <span class="eta-key">Elapsed</span>
+          <span class="eta-val" id="elapsedMin">0<span class="unit"> min</span></span>
+          <span class="eta-key">In taxi</span>
         </div>
       </div>
     </div>
@@ -585,7 +598,7 @@
       <div class="ps-title">Your Ride PIN</div>
       <div class="pin-card">
         <div class="pin-digits" id="ridePin" aria-label="Ride PIN">- - - -</div>
-        <p class="pin-help">Tell your driver this PIN. They have to enter it before the trip can start. <b>Don't get in if they can't.</b></p>
+        <p class="pin-help">Tell your driver this PIN when they arrive. They have to enter it before the trip can start. <b>Don't get in if they can't.</b></p>
         <div class="pin-status" id="pinStatus"></div>
       </div>
     </div>
@@ -687,11 +700,7 @@
 <script src="assets/vendor/leaflet/leaflet.js"></script>
 <script src="assets/safety.js"></script>
 <script src="assets/tracking.js"></script>
-<script>
-(function(){var t=window.SRSafety&&SRSafety.current(30*60*1000),el=document.getElementById("pinStatus");if(!el||!t)return;
- el.className="pin-status "+(t.pinVerified?"ok":"wait");
- el.textContent=t.pinVerified?"✓ Your driver entered the right PIN":"Waiting for your driver to enter it";})();
-</script>
+
 <script>
 /* ── Cursor ── */
 const cur  = document.getElementById('cursor');
@@ -719,12 +728,7 @@ setInterval(updateClock, 1000);
 let rideActive = true;
 let elapsed = 6;
 
-// Elapsed timer
-setInterval(() => {
-  if(!rideActive) return;
-  elapsed++;
-  document.getElementById('elapsedMin').innerHTML = elapsed + '<span class="unit"> min</span>';
-}, 60000);
+
 
 /* ── Toggle sharing ── */
 function toggleSharing() {

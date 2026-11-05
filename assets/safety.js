@@ -23,7 +23,8 @@
 
   /** Starts a new trip with a fresh PIN. */
   function newTrip() {
-    var t = { id: Date.now().toString(36), pin: randomPin(), start: Date.now(), pinVerified: false, pinAttempts: 0, pausedMs: 0 };
+    // start = when the driver set off to the pickup; rideStart = when the PIN matched and the ride began.
+    var t = { id: Date.now().toString(36), pin: randomPin(), start: Date.now(), rideStart: null, pickup: null, pinVerified: false, pinAttempts: 0, pausedMs: 0 };
     save(t);
     return t;
   }
@@ -96,7 +97,7 @@
       if (entered.length < 4) { err.textContent = "Enter all 4 digits."; return; }
       var t = current();
       if (entered === t.pin) {
-        update({ pinVerified: true, pinAttempts: 0, start: Date.now(), pausedMs: 0 });
+        update({ pinVerified: true, pinAttempts: 0, rideStart: Date.now(), pausedMs: 0 });
         close();
         onOk();
         return;
