@@ -27,7 +27,8 @@ function createApp() {
         frameAncestors: ["'none'"],
       },
     },
-    // Lets the browser ask for location on our pages (Permissions-Policy is not set by helmet).
+    // OpenStreetMap's tile servers require a Referer, so send the site's origin (not the full page address).
+    referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
     crossOriginEmbedderPolicy: false,
   }));
   app.use(cors({ origin: (process.env.CORS_ORIGIN || 'http://localhost:5500').split(',').map(s => s.trim()) }));

@@ -151,7 +151,7 @@
 <div class="fi fi1" style="display:flex;align-items:center;justify-content:space-between;">
   <div>
     <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:1.1rem;">Ride Requests</div>
-    <div style="font-size:.78rem;color:var(--muted);">2 requests waiting · Accept before timer expires</div>
+    <div style="font-size:.78rem;color:var(--muted);" id="reqSub">2 requests waiting · Accept before timer expires</div>
   </div>
   <div style="display:flex;gap:.5rem;">
     <div style="background:rgba(0,229,160,.08);border:1px solid rgba(0,229,160,.2);color:var(--accent);font-size:.72rem;font-weight:600;padding:.35rem .85rem;border-radius:50px;">🟢 Online</div>
@@ -326,6 +326,8 @@ SR.ready().then(function (live) {
       var q = here ? '?lat=' + here.latitude + '&lng=' + here.longitude : '';
       return SR.api('/api/trips/open' + q).then(function (rows) {
         list.innerHTML = rows.length ? rows.map(card).join('') : '<div class="req-card"><div class="req-route">No ride requests right now</div><div class="req-meta"><span>New requests appear here instantly. Keep this page open.</span></div></div>';
+        var sub = document.getElementById('reqSub');
+        if (sub) sub.textContent = rows.length ? rows.length + ' request' + (rows.length === 1 ? '' : 's') + ' waiting · first driver to accept gets the ride' : 'No requests waiting · new ones appear instantly';
         var nib = document.querySelector('.ni.active .nib'); if (nib) nib.textContent = rows.length;
       });
     }).catch(function (e) { list.innerHTML = '<div class="req-card"><div class="req-route">' + esc(e.message) + '</div></div>'; });
