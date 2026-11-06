@@ -507,6 +507,22 @@
             </div>
           </div>
         </div>
+        <div id="driverFields" hidden>
+          <div class="field">
+            <label for="regVehicle">Vehicle</label>
+            <div class="input-wrap">
+              <span class="input-icon">🚗</span>
+              <input type="text" id="regVehicle" placeholder="Silver Toyota Corolla"/>
+            </div>
+          </div>
+          <div class="field">
+            <label for="regPlate">Plate number (H plate)</label>
+            <div class="input-wrap">
+              <span class="input-icon">🔖</span>
+              <input type="text" id="regPlate" placeholder="H 4421"/>
+            </div>
+          </div>
+        </div>
         <div class="field">
           <label>Password</label>
           <div class="input-wrap">
@@ -571,6 +587,7 @@
   function selectRole(el) {
     document.querySelectorAll('.role-option').forEach(o => o.classList.remove('selected'));
     el.classList.add('selected');
+    document.getElementById('driverFields').hidden = el.dataset.role !== 'driver';
   }
 
   /* ── Password toggle ── */
@@ -658,6 +675,54 @@
       setTimeout(() => switchTab('login'), 2200);
     }, 1800);
   }
+</script>
+<script src="assets/api.js"></script>
+<script>
+/* Live mode: real sign-in and sign-up with the SafeRoute server. Without a server the demo handlers above stay. */
+SR.ready().then(function (live) {
+  if (!live) return;
+  var params = new URLSearchParams(location.search);
+  if (params.get('expired')) showMsg('error', 'Your session ended. Please sign in again.');
+  var u = SR.user();
+  if (SR.token() && u && !params.get('expired')) { location.href = params.get('next') || SR.homeFor(u); return; }
+  var go = function (r) {
+    SR.saveSession(r);
+    var next = params.get('next');
+    location.href = next && /^saferoute-[a-z-]+\.html/.test(next) ? next : SR.homeFor(r.user);
+  };
+  var busy = function (id, on) { document.getElementById(id).classList.toggle('loading', on); };
+
+  window.handleLogin = function () {
+    clearMsg();
+    var email = document.getElementById('loginEmail').value.trim(), pass = document.getElementById('loginPassword').value;
+    if (!email || !pass) { showMsg('error', 'Please fill in all fields.'); return; }
+    busy('loginBtn', true);
+    SR.api('/api/auth/login', { body: { email: email, password: pass }, auth: false })
+      .then(function (r) { showMsg('success', 'Signed in. Welcome back, ' + r.user.name.split(' ')[0] + '!'); setTimeout(function () { go(r); }, 700); })
+      .catch(function (e) { showMsg('error', e.message); })
+      .finally(function () { busy('loginBtn', false); });
+  };
+
+  window.handleRegister = function () {
+    clearMsg();
+    var v = function (id) { return document.getElementById(id).value.trim(); };
+    var role = (document.querySelector('.role-option.selected') || {}).dataset.role || 'passenger';
+    var pass = document.getElementById('regPassword').value;
+    if (!v('regFirst') || !v('regLast') || !v('regEmail') || !pass) { showMsg('error', 'Please complete all fields.'); return; }
+    if (pass.length < 10) { showMsg('error', 'Use at least 10 characters for your password.'); return; }
+    if (pass !== document.getElementById('regConfirm').value) { showMsg('error', 'Passwords do not match.'); return; }
+    if (!document.getElementById('agreeTerms').checked) { showMsg('error', 'Please agree to the Terms of Service to continue.'); return; }
+    if (role === 'driver' && (!v('regVehicle') || !v('regPlate'))) { showMsg('error', 'Drivers need a vehicle and plate number.'); return; }
+    var body = { name: v('regFirst') + ' ' + v('regLast'), email: v('regEmail'), password: pass, role: role };
+    if (v('regPhone')) body.phone = v('regPhone');
+    if (role === 'driver') { body.vehicle = v('regVehicle'); body.plate = v('regPlate'); }
+    busy('registerBtn', true);
+    SR.api('/api/auth/register', { body: body, auth: false })
+      .then(function (r) { showMsg('success', 'Account created! Welcome to SafeRoute, ' + v('regFirst') + ' 👋'); setTimeout(function () { go(r); }, 900); })
+      .catch(function (e) { showMsg('error', e.message); })
+      .finally(function () { busy('registerBtn', false); });
+  };
+});
 </script>
 <script src="assets/saferoute.js"></script>
 </body>

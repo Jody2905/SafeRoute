@@ -1,37 +1,61 @@
 # SafeRoute: Privacy-First GPS Taxi
 
-**Live site:** https://jody2905.github.io/SafeRoute/
+**Live app:** https://saferoute-api.onrender.com · **Also on GitHub Pages:** https://jody2905.github.io/SafeRoute/
 
-SafeRoute is a front-end prototype of a ride-hailing app for St. Vincent and the Grenadines, built around passenger and driver safety: live GPS trip tracking, trusted contacts, an SOS button, privacy controls and verified drivers. It has two sides:
+SafeRoute is a full-stack ride-hailing app for St. Vincent and the Grenadines, built around passenger safety. A passenger books a ride from their real GPS location, watches the driver come to them live on a map, gives the driver a PIN that the **server** checks before the trip can start, and can send a private live link to someone they trust. The server watches every ride and asks the passenger "Are you OK?" if the taxi leaves the route or stops too long.
 
-- **Passenger:** dashboard, booking, live tracking, trip history, trusted contacts, privacy settings, notifications, profile, payments, reviews, settings
-- **Driver:** dashboard, ride requests, live map, trip history, earnings, performance, messages, settings
+![Server tests](https://github.com/Jody2905/SafeRoute/actions/workflows/server-tests.yml/badge.svg)
 
-Start at the landing page, then sign in with any email and password (the sign-in is simulated) to reach the passenger dashboard. The driver side starts at `saferoute-driver.html`.
+## Try it
 
-## Safety features
+The free server sleeps when idle, so the first visit can take up to a minute.
 
-- **SOS sheet** on the live tracking page: one tap to call emergency services (911 or 999 in St. Vincent and the Grenadines), and a **Share my live location** button that reads your real GPS position with the browser's Geolocation API and shares a map link through the phone's share menu (or copies it).
-- **Real map and GPS** on the tracking page: an OpenStreetMap map of St. Vincent (Leaflet) and real road routes (OSRM, with a fallback). The pickup is the passenger's real GPS location when they allow it (e.g. near Richland Park), otherwise Arnos Vale. The trip goes in three stages: the driver drives to the pickup, waits there until they enter the passenger's PIN, then drives to Kingstown, with live distance, ETA and status at each stage.
-- **Ride PIN:** every trip gets a 4-digit PIN on the passenger's Track My Ride page. When a driver accepts a ride, they must enter it before the trip can start, so the passenger knows it's the right car. Three wrong tries block the trip.
-- **Share my trip:** a live link (`saferoute-share.html`) a trusted contact can open on any phone to follow the taxi on the map, with the driver's name, car and plate. The taxi's position is worked out from the trip's start time, so everyone sees the same place. The link expires after the trip.
-- **Route alerts:** the app measures how far the taxi is from the planned route. More than 150 m off route, or stopped for over 3 minutes, and the passenger gets an "Are you OK?" check; no answer in 30 seconds alerts their trusted contacts. Test buttons on the tracking page trigger a detour or a long stop.
-- Trusted contacts, trip sharing and privacy controls for what drivers can see.
-- Driver verification status (licence, insurance, vehicle fitness, background check).
+1. **Passenger:** on one phone or browser, sign in as `passenger@example.com` (password `saferoute-demo`), tap **Use my location as pickup** (or pick a place), choose a destination and book.
+2. **Driver:** on a second phone, or a private/incognito window, sign in as `driver@example.com` (same password). The request appears instantly on **Ride Requests**. Tap **Accept**.
+3. On the driver's trip page, drive (or turn on **Test drive** to move the taxi from a desk). The passenger sees the taxi move in real time.
+4. Tap **I've arrived**. The passenger is told to check the plate and give their PIN. Enter the PIN on the driver's phone to start the ride. Three wrong PINs block the trip.
+5. On the passenger's phone, tap **Share Link** and open it on a third device: a trusted contact sees the taxi, driver, car and plate, but not the PIN or the exact pickup address.
+6. **Complete trip** on the driver's phone. Everyone sees "Arrived safely", and the share link stops working.
+
+You can also create your own passenger or driver account. Without the server (opening the files from your computer, or adding `?demo`), every page runs a built-in demo trip instead.
+
+## How safety works
+
+| Feature | How it works |
+|---|---|
+| **Ride PIN** | The server makes a random 4-digit PIN for each trip and shows it only to the passenger. The driver enters it at pickup and the server compares it in constant time. Three wrong tries block the trip and warn the passenger. The PIN is deleted the moment it matches. |
+| **Live location** | The driver's phone sends GPS every few seconds. The server keeps the trail and pushes each update over **WebSockets** to the passenger and anyone following a share link. |
+| **Share links** | A random 192-bit token. Only its SHA-256 hash is stored, so a database leak can't reveal live links. Links work only while the trip is happening, and can be switched off at any time. |
+| **Route alerts** | The server measures the taxi's distance from the planned road route. More than 150 m off route for 20 s, or stopped within 30 m for over 3 minutes, opens an alert. The passenger has 60 s to answer **I'm OK** or **I need help**, or the alert is escalated. **SOS** escalates straight away. |
+| **Privacy** | Drivers see only the distance to a request until they accept. GPS trails, pickup coordinates and share tokens are deleted 24 hours after a trip ends (`LOCATION_RETENTION_HOURS`). |
+| **Accounts** | Passwords hashed with bcrypt (cost 12), sign-in tokens that expire after 12 hours, rate limits on sign-in, and the same response time whether or not an email exists. Drivers need a vehicle and H plate, and must be verified before accepting rides. |
+| **Audit log** | Every sign-in, trip step, wrong PIN, alert and share is recorded with who did it. |
 
 ## Tech
 
-Plain HTML, CSS and JavaScript, no build step. Maps use [Leaflet](https://leafletjs.com) (bundled in `assets/vendor/leaflet`) with © OpenStreetMap contributors map data; routes come from the public [OSRM](https://project-osrm.org) demo server. `assets/tracking.js` runs the live map, share page and route alerts; `assets/safety.js` handles ride PINs. `assets/saferoute.js` is shared by every page: the phone menu, keyboard access for the sidebar, touch-screen cursor fix and the SOS sheet.
+- **Front end:** HTML, CSS and JavaScript pages, no build step. Maps use [Leaflet](https://leafletjs.com) with © OpenStreetMap contributors data, and routes come from the public [OSRM](https://project-osrm.org) server. `assets/api.js` connects every page to the server.
+- **Back end (`server/`):** Node.js, Express 5, PostgreSQL (Neon), `ws` for WebSockets, zod for input checks, helmet for security headers. The server also serves the site, but only the pages and `assets/`, never its own files.
+- **Tests:** 9 end-to-end tests against a real PostgreSQL database, run on every push by GitHub Actions: a full trip, wrong PINs, share links, route alerts, privacy clean-up, contacts, live WebSocket updates, and a check that server files can't be downloaded.
 
-## Publish on GitHub Pages
+```
+cd server
+npm install
+cp .env.example .env        # add your Neon connection string and a long JWT_SECRET
+npm run db:setup            # creates the tables and sample accounts
+npm run dev                 # http://localhost:3000
+TEST_DATABASE_URL=postgres://… npm test   # use a throwaway database: the tests erase it
+```
 
-1. Push this repo to GitHub.
-2. Go to **Settings → Pages**. Under **Build and deployment**, set **Source** to *Deploy from a branch*, then pick **main** and **/ (root)**, and click **Save**.
-3. After a minute or two the site is live at `https://jody2905.github.io/SafeRoute/`. `index.html` is the landing page.
+## Deploy (Render + Neon, free)
+
+1. In [Neon](https://neon.tech), create a project called **saferoute** and copy its **pooled** connection string.
+2. In [Render](https://render.com), choose **New → Blueprint** and pick this repo. `render.yaml` creates the `saferoute-api` service. Paste the Neon string as `DATABASE_URL`.
+3. The first start creates the tables and sample accounts. Check `/api/health` shows `{"ok":true}`.
+4. If Render gives the service a different address, update `HOSTED_API` at the top of `assets/api.js` so the GitHub Pages copy connects to it.
 
 ## Status
 
-This is a front-end prototype. Bookings, payments, messages and sign-in use sample data and don't save anything. Without a server, the ride PIN only syncs between pages in the same browser, and alerts to contacts are simulated. All people, plates and trips are fictional. Prices are in EC$.
+A portfolio project. Trips, accounts and alerts are real, but payments are not taken, alerts are recorded rather than sent by SMS, and drivers are verified automatically (`DEMO_MODE=true`). All sample people, plates and trips are fictional. Prices are in EC$. Place coordinates are approximate town centres.
 
 ## Author
 

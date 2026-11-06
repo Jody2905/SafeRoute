@@ -1,0 +1,26 @@
+# Render Blueprint: one free web service that runs the SafeRoute API and serves the whole site.
+# Render → New → Blueprint → pick this repo. Paste your Neon connection string when asked.
+services:
+  - type: web
+    name: saferoute-api
+    runtime: node
+    plan: free
+    region: ohio                         # same region as the Neon database
+    rootDir: server
+    buildCommand: npm ci
+    startCommand: npm run start:render   # creates the tables + sample accounts on the first start only
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: DATABASE_URL
+        sync: false                      # Neon pooled connection string (host contains -pooler)
+      - key: JWT_SECRET
+        generateValue: true
+      - key: CORS_ORIGIN
+        value: https://jody2905.github.io
+      # Verifies new drivers straight away so the demo works without an admin.
+      - key: DEMO_MODE
+        value: "true"
+      - key: LOCATION_RETENTION_HOURS
+        value: "24"

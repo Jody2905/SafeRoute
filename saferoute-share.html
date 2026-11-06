@@ -50,7 +50,7 @@
 <main>
   <div class="map-wrap"><div id="map" role="region" aria-label="Live map of the trip"></div></div>
   <aside>
-    <h1>Jody-Ann is on a SafeRoute trip</h1>
+    <h1 id="shareTitle">Jody-Ann is on a SafeRoute trip</h1>
     <div class="status" id="shareStatus" aria-live="polite">Loading the trip…</div>
 
     <div class="card">
@@ -64,27 +64,38 @@
     <div class="card">
       <div class="k">Trip</div>
       <div class="row"><span>Pickup</span><span id="fromName">Arnos Vale</span></div>
-      <div class="row"><span>To</span><span>Kingstown</span></div>
+      <div class="row"><span>To</span><span id="toName">Kingstown</span></div>
     </div>
 
     <div class="card">
       <div class="k">Driver</div>
-      <div class="row"><span>Name</span><span>Marcus T. · ★ 4.9</span></div>
-      <div class="row"><span>Car</span><span>Silver Toyota Corolla</span></div>
-      <div class="row"><span>Plate</span><span>H 4421</span></div>
+      <div class="row"><span>Name</span><span id="dName">Marcus T. · ★ 4.9</span></div>
+      <div class="row"><span>Car</span><span id="dCar">Silver Toyota Corolla</span></div>
+      <div class="row"><span>Plate</span><span id="dPlate">H 4421</span></div>
       <div class="row"><span>ID check</span><span style="color:var(--accent)">✓ Verified driver</span></div>
     </div>
 
     <div class="card">
       <div class="k">Worried?</div>
-      <p class="help">Call Jody-Ann first. If you can't reach her and think she's in danger, call emergency services and give them the taxi's plate and its last place on the map.</p>
+      <p class="help" id="worryText">Call Jody-Ann first. If you can't reach her and think she's in danger, call emergency services and give them the taxi's plate and its last place on the map.</p>
       <a class="call" href="tel:911">📞 Call 911</a>
     </div>
-    <p class="demo">Demo: this page shows a simulated trip. The link only works while the trip is happening.</p>
+    <p class="demo" id="demoNote">Demo: this page shows a simulated trip. The link only works while the trip is happening.</p>
   </aside>
 </main>
 <div id="gpsLog" hidden></div>
 <script src="assets/vendor/leaflet/leaflet.js"></script>
-<script src="assets/tracking.js"></script>
+<script src="assets/api.js"></script>
+<script>
+// A real share link (?s=…) shows the live trip from the server; older demo links show the demo trip.
+(function () {
+  var real = new URLSearchParams(location.search).get('s');
+  if (!real) { SR.load('assets/tracking.js'); return; }
+  SR.ready().then(function (live) {
+    if (live) SR.load('assets/live-share.js');
+    else document.getElementById('shareStatus').textContent = "Can't reach SafeRoute right now. Try again in a minute.";
+  });
+})();
+</script>
 </body>
 </html>

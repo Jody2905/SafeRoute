@@ -1,0 +1,32 @@
+{
+  "name": "saferoute-api",
+  "version": "0.1.0",
+  "description": "SafeRoute API: accounts, live trips, ride PIN, share links and route alerts",
+  "main": "src/index.js",
+  "private": true,
+  "license": "MIT",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js",
+    "db:setup": "node db/setup.js",
+    "db:reset": "node db/reset.js",
+    "start:render": "node db/setup.js && node src/index.js",
+    "test": "node --test --test-concurrency=1 test/api.test.js"
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "cors": "^2.8.6",
+    "dotenv": "^18.0.9",
+    "express": "^5.3.0",
+    "express-rate-limit": "^8.7.2",
+    "helmet": "^8.3.0",
+    "jsonwebtoken": "^9.0.3",
+    "pg": "^8.23.1",
+    "ws": "^8.18.0",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "supertest": "^7.3.1"
+  }
+}

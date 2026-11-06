@@ -376,7 +376,7 @@
             <label>Pickup Location</label>
             <div class="input-wrap">
               <span class="iicon">📍</span>
-              <input type="text" id="pickup" placeholder="Arnos Vale, St. George" value="Arnos Vale, St. George"/>
+              <input type="text" id="pickup" placeholder="Arnos Vale" value="Arnos Vale" list="srPlaces" autocomplete="off"/>
             </div>
           </div>
           <div class="loc-connector"></div>
@@ -384,19 +384,22 @@
             <label>Destination</label>
             <div class="input-wrap">
               <span class="iicon">🏁</span>
-              <input type="text" id="destination" placeholder="Kingstown" value="Kingstown"/>
+              <input type="text" id="destination" placeholder="Kingstown" value="Kingstown" list="srPlaces" autocomplete="off"/>
             </div>
           </div>
         </div>
 
+        <datalist id="srPlaces"></datalist>
+        <button type="button" class="contact-chip" id="useMyLocation" style="align-self:flex-start;border:none;cursor:pointer;">📡 Use my location as pickup</button>
         <!-- Quick destinations -->
         <div>
           <div style="font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.5rem;font-weight:600;">Quick Destinations</div>
           <div style="display:flex;gap:.5rem;flex-wrap:wrap;">
-            <div class="contact-chip" onclick="setDest('Argyle Airport')">✈ Airport</div>
-            <div class="contact-chip" onclick="setDest('University of the West Indies')">🎓 SVGCC</div>
+            <div class="contact-chip" onclick="setDest('Argyle International Airport')">✈ Airport</div>
+            <div class="contact-chip" onclick="setDest('SVGCC, Villa')">🎓 SVGCC</div>
             <div class="contact-chip" onclick="setDest('Layou')">🛍 Layou</div>
             <div class="contact-chip" onclick="setDest('Calliaqua')">🚉 Calliaqua</div>
+            <div class="contact-chip" onclick="setDest('Kingstown')">🏙 Kingstown</div>
           </div>
         </div>
 
@@ -880,6 +883,55 @@ window.addEventListener('resize',()=>{
 setTimeout(drawBgMap,100);
 </script>
 <script src="assets/safety.js"></script>
+<script src="assets/places.js"></script>
+<script src="assets/api.js"></script>
+<script>
+/* Places list for both boxes, and "use my location" (works in demo and live mode). */
+(function () {
+  var dl = document.getElementById('srPlaces');
+  SR_PLACES.forEach(function (p) { var o = document.createElement('option'); o.value = p.name; dl.appendChild(o); });
+  window.srPickupFix = null; // { lat, lng } from GPS
+  document.getElementById('useMyLocation').addEventListener('click', function () {
+    if (!navigator.geolocation) return showToast('⚠️', "This browser can't read your location.");
+    showToast('📡', 'Finding you…');
+    navigator.geolocation.getCurrentPosition(function (pos) {
+      var c = pos.coords;
+      if (!SR_inSVG(c.latitude, c.longitude)) return showToast('📍', "You're outside St. Vincent. Pick a pickup from the list.");
+      var near = SR_nearestPlace(c.latitude, c.longitude);
+      window.srPickupFix = { lat: c.latitude, lng: c.longitude, name: 'My location (near ' + near.name + ')' };
+      document.getElementById('pickup').value = srPickupFix.name;
+      showToast('📍', 'Pickup set to your location near ' + near.name);
+    }, function (err) { showToast('⚠️', err.code === 1 ? 'Location permission was denied.' : "Couldn't get your location."); }, { enableHighAccuracy: true, timeout: 15000 });
+  });
+  document.getElementById('pickup').addEventListener('input', function () { window.srPickupFix = null; });
+})();
+
+/* Live mode: the booking is sent to the SafeRoute server and nearby drivers see it. */
+SR.ready().then(function (live) {
+  if (!live) return;
+  var u = SR.requireUser('passenger');
+  if (!u) return;
+  // Already on a trip? Go straight to tracking.
+  SR.api('/api/trips/current').then(function (t) { if (t) location.href = 'saferoute-tracking.html'; }).catch(function () {});
+  var place = function (name) {
+    var n = String(name || '').trim().toLowerCase();
+    return SR_PLACES.filter(function (p) { return p.name.toLowerCase() === n; })[0] || null;
+  };
+  window.bookRide = function () {
+    var pickup = window.srPickupFix || place(document.getElementById('pickup').value);
+    var dest = place(document.getElementById('destination').value);
+    if (!pickup) return showToast('⚠️', 'Choose your pickup from the list, or use your location.');
+    if (!dest) return showToast('⚠️', 'Choose your destination from the list.');
+    var btn = document.getElementById('mainBtn');
+    btn.classList.add('loading');
+    SR.api('/api/trips', { body: { pickup: { lat: pickup.lat, lng: pickup.lng, name: pickup.name }, dest: { lat: dest.lat, lng: dest.lng, name: dest.name } } })
+      .then(function () { showToast('🚕', 'Ride requested. Finding you a driver…'); setTimeout(function () { location.href = 'saferoute-tracking.html'; }, 800); })
+      .catch(function (e) { showToast('⚠️', e.message); })
+      .finally(function () { btn.classList.remove('loading'); document.getElementById('btnText').style.opacity = '1'; });
+  };
+  window.goToTracking = function () { location.href = 'saferoute-tracking.html'; };
+});
+</script>
 <script src="assets/saferoute.js"></script>
 </body>
 </html>

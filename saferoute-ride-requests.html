@@ -141,7 +141,7 @@
 <body>
 <div class="cursor" id="cursor"></div>
 <div class="cursor-ring" id="cursorRing"></div>
-<div class="sidebar"><div class="sb-logo"><a href="saferoute-landing.html">Safe<span>Route</span></a><span class="driver-badge">Driver</span></div><div class="sb-profile"><div class="sb-av">👨🏽‍✈️</div><div><div class="sb-name">Marcus T.</div><div class="sb-plate">H 4421 · Toyota Corolla</div></div><div class="sb-rating"><div class="sb-stars">★ 4.9</div><div class="sb-trips">312 trips</div></div></div><div class="sb-online"><div><div class="ol-label" id="olLabel">🟢 Online</div><div class="ol-sub" id="olSub">Accepting rides</div></div><div class="big-tog on" id="onlineTog" onclick="toggleOnline()"></div></div><nav class="sb-nav"><div class="ni" onclick="go('saferoute-driver.html')">📊 Dashboard </div><div class="ni" onclick="go('saferoute-tracking.html')">🗺 Live Map </div><div class="ng">Main</div><div class="ni active" onclick="void(0)">📋 Ride Requests <span class="nib">2</span></div><div class="ni" onclick="go('saferoute-driver-trips.html')">📜 Trip History </div><div class="ng">Earnings</div><div class="ni" onclick="go('saferoute-earnings.html')">💰 Earnings </div><div class="ni" onclick="go('saferoute-performance.html')">📈 Performance </div><div class="ng">Account</div><div class="ni" onclick="go('saferoute-driver-settings.html')">⚙️ Settings </div><div class="ni" onclick="go('saferoute-privacy.html')">🛡 Safety Center </div></nav><div class="sb-bot"><button class="so-btn" onclick="signOut()">🚪 Sign Out</button></div></div>
+<div class="sidebar"><div class="sb-logo"><a href="saferoute-landing.html">Safe<span>Route</span></a><span class="driver-badge">Driver</span></div><div class="sb-profile"><div class="sb-av">👨🏽‍✈️</div><div><div class="sb-name" id="sbName">Marcus T.</div><div class="sb-plate" id="sbPlate">H 4421 · Toyota Corolla</div></div><div class="sb-rating"><div class="sb-stars" id="sbRating">★ 4.9</div><div class="sb-trips">312 trips</div></div></div><div class="sb-online"><div><div class="ol-label" id="olLabel">🟢 Online</div><div class="ol-sub" id="olSub">Accepting rides</div></div><div class="big-tog on" id="onlineTog" onclick="toggleOnline()"></div></div><nav class="sb-nav"><div class="ni" onclick="go('saferoute-driver.html')">📊 Dashboard </div><div class="ni" onclick="go('saferoute-tracking.html')">🗺 Live Map </div><div class="ng">Main</div><div class="ni active" onclick="void(0)">📋 Ride Requests <span class="nib">2</span></div><div class="ni" onclick="go('saferoute-driver-trips.html')">📜 Trip History </div><div class="ng">Earnings</div><div class="ni" onclick="go('saferoute-earnings.html')">💰 Earnings </div><div class="ni" onclick="go('saferoute-performance.html')">📈 Performance </div><div class="ng">Account</div><div class="ni" onclick="go('saferoute-driver-settings.html')">⚙️ Settings </div><div class="ni" onclick="go('saferoute-privacy.html')">🛡 Safety Center </div></nav><div class="sb-bot"><button class="so-btn" onclick="signOut()">🚪 Sign Out</button></div></div>
 <div class="main">
   <div class="topbar">
     <div class="tb-title">Ride Requests</div>
@@ -159,7 +159,7 @@
   </div>
 </div>
 
-<div style="display:flex;flex-direction:column;gap:1rem;" class="fi fi2">
+<div style="display:flex;flex-direction:column;gap:1rem;" class="fi fi2" id="reqList">
 
   <!-- Request 1 - urgent -->
   <div class="req-card urgent" id="req1">
@@ -291,6 +291,57 @@ function openDetails(from,to,pass,dist,time,fare,type,rating){
 }
 </script>
 <script src="assets/safety.js"></script>
+<script src="assets/api.js"></script>
+<script>
+/* Live mode: real ride requests from passengers, updated instantly. */
+SR.ready().then(function (live) {
+  if (!live) return;
+  var u = SR.requireUser('driver');
+  if (!u) return;
+  var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); };
+  document.getElementById('sbName').textContent = u.name;
+  if (u.driver) {
+    document.getElementById('sbPlate').textContent = u.driver.plate + ' · ' + u.driver.vehicle;
+    document.getElementById('sbRating').textContent = '★ ' + Number(u.driver.rating).toFixed(1);
+  }
+  document.querySelectorAll('.ni').forEach(function (n) { if (/saferoute-tracking\.html/.test(n.getAttribute('onclick') || '')) n.setAttribute('onclick', "go('saferoute-driver-trip.html')"); });
+  document.querySelectorAll('.tb-btn.primary').forEach(function (b) { b.setAttribute('onclick', "go('saferoute-driver-trip.html')"); b.textContent = '🗺 My trip'; });
+  window.signOut = function () { SR.signOut(); };
+  var list = document.getElementById('reqList');
+  var here = null;
+  if (navigator.geolocation) navigator.geolocation.getCurrentPosition(function (p) { here = p.coords; load(); }, function () {}, { timeout: 10000 });
+
+  function card(r, i) {
+    var mins = Math.max(1, Math.round(r.km / 30 * 60));
+    return '<div class="req-card' + (i === 0 ? ' urgent' : '') + '">' +
+      '<div class="req-head"><div class="req-num">' + (i + 1) + '</div><span class="badge b-b">' + (r.awayKm != null ? r.awayKm + ' km away' : 'New request') + '</span></div>' +
+      '<div class="req-route">' + esc(r.pickupName) + ' → ' + esc(r.destName) + '</div>' +
+      '<div class="req-passenger"><div class="pass-av">🧑🏽</div><div style="flex:1;"><span style="font-weight:500;">' + esc(r.passengerName) + '</span> <span style="color:var(--muted);font-size:.72rem;">Passenger · requested ' + new Date(r.requestedAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) + '</span></div></div>' +
+      '<div class="req-meta"><span>📍 Pickup: <b>' + esc(r.pickupName) + '</b></span><span>🏁 Drop: <b>' + esc(r.destName) + '</b></span><span>📏 <b>' + r.km + ' km</b></span><span>⏱ ~' + mins + ' min</span><span>💵 Fare: <b>EC$' + r.fareXcd + '</b></span></div>' +
+      '<div class="req-btns"><button class="btn-accept" data-accept="' + esc(r.id) + '">✅ Accept Ride</button></div></div>';
+  }
+  function load() {
+    SR.api('/api/trips/current').then(function (t) {
+      if (t) { list.innerHTML = '<div class="req-card urgent"><div class="req-route">You have a trip in progress</div><div class="req-meta"><span>' + esc(t.pickupName) + ' → ' + esc(t.dest.name) + '</span></div><div class="req-btns"><button class="btn-accept" onclick="go(\'saferoute-driver-trip.html\')">🗺 Go to my trip</button></div></div>'; return; }
+      var q = here ? '?lat=' + here.latitude + '&lng=' + here.longitude : '';
+      return SR.api('/api/trips/open' + q).then(function (rows) {
+        list.innerHTML = rows.length ? rows.map(card).join('') : '<div class="req-card"><div class="req-route">No ride requests right now</div><div class="req-meta"><span>New requests appear here instantly. Keep this page open.</span></div></div>';
+        var nib = document.querySelector('.ni.active .nib'); if (nib) nib.textContent = rows.length;
+      });
+    }).catch(function (e) { list.innerHTML = '<div class="req-card"><div class="req-route">' + esc(e.message) + '</div></div>'; });
+  }
+  list.addEventListener('click', function (e) {
+    var b = e.target.closest('[data-accept]'); if (!b) return;
+    b.disabled = true;
+    SR.api('/api/trips/' + b.dataset.accept + '/accept', { body: {} })
+      .then(function () { showToast('✅', 'Ride accepted. Head to the pickup.'); setTimeout(function () { go('saferoute-driver-trip.html'); }, 700); })
+      .catch(function (err) { showToast('⚠️', err.message); load(); });
+  });
+  load();
+  SR.connect({ type: 'auth', token: SR.token() }, function (m) { if (m.type === 'requests') load(); });
+  setInterval(load, 20000);
+});
+</script>
 <script src="assets/saferoute.js"></script>
 </body>
 </html>

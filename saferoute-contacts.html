@@ -132,7 +132,7 @@
   <span style="font-size:1.2rem;flex-shrink:0;">🛡</span>
   <div><div style="font-size:.85rem;font-weight:600;margin-bottom:3px;">How trusted contacts work</div><div style="font-size:.77rem;color:var(--muted);line-height:1.55;">When you enable location sharing on a ride, your trusted contacts receive a secure private link to monitor your journey in real time. They are notified automatically when you arrive safely, and all access ends when the ride completes.</div></div>
 </div>
-<div class="contact-grid fi fi2">
+<div class="contact-grid fi fi2" id="contactGrid">
   <div class="contact-card">
     <div class="cc-av av-g">👩</div>
     <div style="flex:1;">
@@ -185,12 +185,12 @@
 <div class="modal-overlay" id="addModal">
   <div class="modal-box">
     <div class="mb-head"><span class="mb-title">Add Trusted Contact</span><button class="mb-close" onclick="document.getElementById('addModal').classList.remove('show')">✕</button></div>
-    <div class="field"><label>Full Name</label><input type="text" placeholder="e.g. Aunty Kim"/></div>
-    <div class="field"><label>Relationship</label><select><option>Family</option><option>Friend</option><option>Partner</option><option>Colleague</option><option>Other</option></select></div>
-    <div class="field"><label>Phone Number</label><input type="tel" placeholder="+1 784 555-0000"/></div>
+    <div class="field"><label for="cName">Full Name</label><input type="text" id="cName" placeholder="e.g. Aunty Kim"/></div>
+    <div class="field"><label for="cRel">Relationship</label><select id="cRel"><option>Family</option><option>Friend</option><option>Partner</option><option>Colleague</option><option>Other</option></select></div>
+    <div class="field"><label for="cPhone">Phone Number</label><input type="tel" id="cPhone" placeholder="+1 784 555-0000"/></div>
     <div class="field"><label>Email (optional)</label><input type="email" placeholder="contact@email.com"/></div>
     <div class="m-actions">
-      <button class="mbtn mbtn-p" onclick="showToast('✅','Contact added successfully!');document.getElementById('addModal').classList.remove('show')">Add Contact</button>
+      <button class="mbtn mbtn-p" id="addContactBtn" onclick="showToast('✅','Contact added successfully!');document.getElementById('addModal').classList.remove('show')">Add Contact</button>
       <button class="mbtn mbtn-g" onclick="document.getElementById('addModal').classList.remove('show')">Cancel</button>
     </div>
   </div>
@@ -209,6 +209,44 @@ function go(p){window.location.href=p;}
 function signOut(){showToast('👋','Signing out...');setTimeout(()=>go('saferoute-auth.html'),1200);}
 let tt;function showToast(i,t){const el=document.getElementById('toastEl');document.getElementById('tIcon').textContent=i;document.getElementById('tText').textContent=t;el.classList.add('show');clearTimeout(tt);tt=setTimeout(()=>el.classList.remove('show'),2800);}
 
+</script>
+<script src="assets/api.js"></script>
+<script>
+/* Live mode: contacts are saved to your SafeRoute account. */
+SR.ready().then(function (live) {
+  if (!live) return;
+  if (!SR.requireUser('passenger')) return;
+  window.signOut = function () { SR.signOut(); };
+  var grid = document.getElementById('contactGrid');
+  var addCard = grid.querySelector('.add-contact-card');
+  var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); };
+  function load() {
+    SR.api('/api/contacts').then(function (list) {
+      grid.querySelectorAll('.contact-card').forEach(function (c) { c.remove(); });
+      list.forEach(function (c) {
+        var el = document.createElement('div');
+        el.className = 'contact-card';
+        el.innerHTML = '<div class="cc-av av-g">👤</div><div style="flex:1;"><div class="cc-name">' + esc(c.name) + '</div><div class="cc-rel">' + esc(c.relation || 'Contact') + '</div><div class="cc-phone">' + esc(c.phone) + '</div></div>' +
+          '<div class="cc-actions"><div class="cc-btn" role="button" tabindex="0" title="Remove" data-del="' + c.id + '" style="color:var(--danger);">🗑</div></div>';
+        grid.insertBefore(el, addCard);
+      });
+      addCard.hidden = list.length >= 5;
+    }).catch(function (e) { showToast('⚠️', e.message); });
+  }
+  grid.addEventListener('click', function (e) {
+    var b = e.target.closest('[data-del]'); if (!b) return;
+    if (!window.confirm('Remove this contact?')) return;
+    SR.api('/api/contacts/' + b.dataset.del, { method: 'DELETE' }).then(function () { showToast('🗑', 'Contact removed.'); load(); }).catch(function (err) { showToast('⚠️', err.message); });
+  });
+  document.getElementById('addContactBtn').onclick = function () {
+    var name = document.getElementById('cName').value.trim(), phone = document.getElementById('cPhone').value.trim();
+    if (!name || !phone) return showToast('⚠️', 'Add a name and phone number.');
+    SR.api('/api/contacts', { body: { name: name, phone: phone, relation: document.getElementById('cRel').value } })
+      .then(function () { showToast('✅', name + ' added.'); document.getElementById('addModal').classList.remove('show'); document.getElementById('cName').value = ''; document.getElementById('cPhone').value = ''; load(); })
+      .catch(function (err) { showToast('⚠️', err.message); });
+  };
+  load();
+});
 </script>
 <script src="assets/saferoute.js"></script>
 </body>

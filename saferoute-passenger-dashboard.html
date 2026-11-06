@@ -376,7 +376,7 @@
       <div class="online-ring"></div>
     </div>
     <div>
-      <div class="sb-uname">Jody-Ann T.</div>
+      <div class="sb-uname" id="sbUname">Jody-Ann T.</div>
       <div class="sb-email">jodyann@email.com</div>
     </div>
     <span class="sb-badge">Passenger</span>
@@ -429,7 +429,7 @@
 
   <!-- Topbar -->
   <div class="topbar">
-    <div class="tb-greeting">Good afternoon, <span>Jody-Ann</span> 👋</div>
+    <div class="tb-greeting">Good afternoon, <span id="greetName">Jody-Ann</span> 👋</div>
     <div class="tb-right">
       <span class="tb-clock" id="clockEl">--:--</span>
       <div class="tb-icon-btn" onclick="showToast('🔔','You have 3 unread notifications.')">🔔<span class="notif-pip"></span></div>
@@ -777,6 +777,20 @@ function go(p){ window.location.href=p; }
 function signOut(){ showToast('👋','Signing out...'); setTimeout(()=>go('saferoute-auth.html'),1200); }
 </script>
 <script src="assets/safety.js"></script>
+<script src="assets/api.js"></script>
+<script>
+SR.ready().then(function (live) {
+  if (!live) return;
+  var u = SR.requireUser('passenger');
+  if (!u) return;
+  var first = u.name.split(' ')[0];
+  document.getElementById('greetName').textContent = first;
+  document.getElementById('sbUname').textContent = first + (u.name.split(' ')[1] ? ' ' + u.name.split(' ')[1][0] + '.' : '');
+  var h = new Date().getHours();
+  var g = document.querySelector('.tb-greeting'); if (g) g.firstChild.textContent = (h < 12 ? 'Good morning, ' : h < 18 ? 'Good afternoon, ' : 'Good evening, ');
+  window.signOut = function () { SR.signOut(); };
+});
+</script>
 <script src="assets/saferoute.js"></script>
 </body>
 </html>

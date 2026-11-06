@@ -517,9 +517,9 @@
 
     <!-- Driver has arrived -->
     <div class="pickup-banner" id="pickupBanner" hidden role="status">
-      <b>🚕 Marcus has arrived</b>
-      <span>Check the plate is <b>H 4421</b>, then tell him your PIN. He enters it on his phone to start the trip.</span>
-      <button type="button" onclick="SRTrack.driverPin()">Demo: act as the driver and enter the PIN</button>
+      <b id="pbTitle">🚕 Marcus has arrived</b>
+      <span id="pbText">Check the plate is <b>H 4421</b>, then tell him your PIN. He enters it on his phone to start the trip.</span>
+      <button type="button" id="pbDemo" onclick="SRTrack.driverPin()">Demo: act as the driver and enter the PIN</button>
     </div>
 
     <!-- Real GPS -->
@@ -541,7 +541,7 @@
     <!-- Ride Status -->
     <div class="ride-status-card">
       <div class="rs-header">
-        <span class="rs-title">Ride #SR-20486</span>
+        <span class="rs-title" id="rideTitle">Ride #SR-20486</span>
         <span class="rs-badge" id="rideBadge">Driver en route</span>
       </div>
 
@@ -609,10 +609,10 @@
       <div class="driver-row">
         <div class="driver-avatar">👨🏽‍✈️</div>
         <div style="flex:1;">
-          <div class="driver-name">Marcus T.</div>
-          <div class="driver-plate">H 4421</div>
+          <div class="driver-name" id="drvName">Marcus T.</div>
+          <div class="driver-plate" id="drvPlate">H 4421</div>
         </div>
-        <div class="driver-rating">★ 4.9</div>
+        <div class="driver-rating" id="drvRating">★ 4.9</div>
       </div>
       <div class="driver-actions">
         <button class="dact-btn" onclick="showToast('📞','Calling your driver...')">📞 Call</button>
@@ -656,8 +656,8 @@
     <!-- Safety alerts -->
     <div class="panel-section">
       <div class="ps-title">Route Alerts</div>
-      <p class="pin-help">SafeRoute checks the taxi against the planned route. If it goes more than 150 m off the route, or stops for over 3 minutes, you're asked if you're OK. No answer in 30 seconds and your trusted contacts get your live link.</p>
-      <div class="test-row">
+      <p class="pin-help" id="alertHelp">SafeRoute checks the taxi against the planned route. If it goes more than 150 m off the route, or stops for over 3 minutes, you're asked if you're OK. No answer in 30 seconds and your trusted contacts get your live link.</p>
+      <div class="test-row" id="testRow">
         <button class="dact-btn" onclick="SRTrack.simulateDetour()">🧪 Test: detour</button>
         <button class="dact-btn" onclick="SRTrack.simulateStop()">🧪 Test: long stop</button>
       </div>
@@ -673,7 +673,7 @@
 
     <!-- End Ride -->
     <div class="end-ride-section">
-      <button class="btn-end-ride" onclick="endRide()">
+      <button class="btn-end-ride" id="endRideBtn" onclick="endRide()">
         🏁 End Ride & Stop Tracking
       </button>
     </div>
@@ -699,7 +699,12 @@
 
 <script src="assets/vendor/leaflet/leaflet.js"></script>
 <script src="assets/safety.js"></script>
-<script src="assets/tracking.js"></script>
+<script src="assets/places.js"></script>
+<script src="assets/api.js"></script>
+<script>
+// With the SafeRoute server: the real trip. Without it: the built-in demo trip.
+SR.ready().then(function (live) { SR.load(live ? 'assets/live-tracking.js' : 'assets/tracking.js'); });
+</script>
 
 <script>
 /* ── Cursor ── */
