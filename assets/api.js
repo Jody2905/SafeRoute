@@ -5,7 +5,7 @@
 (function () {
   "use strict";
   // The SafeRoute server on Render. Change this if Render gives your service a different address.
-  var HOSTED_API = "https://saferoute-api.onrender.com";
+  var HOSTED_API = "https://saferoute-api-ir4y.onrender.com";
   var KEY_TOKEN = "saferoute.token", KEY_USER = "saferoute.user";
 
   var store = {
