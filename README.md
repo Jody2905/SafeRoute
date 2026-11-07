@@ -32,7 +32,8 @@ Prices are in EC$ and worked out by the server from the planned road route.
 | **Private ride** (Open route off) | +10%. No one else is added, and the car isn't shown to other passengers until the trip ends |
 | **Shared ride** (two bookings in one car) | Each booking pays 2/3 of its own ride fare, plus 15% of it for each extra person. A EC$60 ride with one extra person costs 40 + 9 = EC$49 |
 | **Extra stops** | EC$3 each, up to 3 |
-| **Changing the drop-off** | The fare is worked out again for the new route. "Drop me here" uses the taxi's position |
+| **Moving the drop-off further** | The fare is worked out again for the longer route |
+| **Getting off early** (once a driver has accepted) | You pay the fare for the trip you booked, with **15% off** if 2 or more other bookings are still in the car or the driver picked up a new rider on your route during your ride, or **10% off** if 1 other booking of 2 or more people is still in the car. The passenger sees the price before confirming. A private ride can switch to Open route at this point, so the driver can pick someone up on the rest of the way |
 | **Driver detours** | Never charged: the fare only uses the planned route |
 
 Seats depend on the vehicle: car 4, SUV 6, van 14. A shared ride only matches someone whose pickup is within about 1 km of the route and who is heading the same way, and only while there are enough free seats. Private bookings are never shared.

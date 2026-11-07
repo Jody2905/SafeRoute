@@ -131,7 +131,7 @@
       setText("pPickup", t.pickup.name);
       show("pStopsRow", (t.stops || []).length > 0);
       setText("pStops", (t.stops || []).map(function (s) { return s.name; }).join(", "));
-      setText("pDest", t.dest.name);
+      setText("pDest", t.dest.name + (t.earlyDropoff ? " (booked to " + t.earlyDropoff.bookedDest + ")" : ""));
       setText("pParty", t.partySize === 1 ? "1" : t.partySize + " (" + t.passengerName + " + " + (t.partySize - 1) + ")");
       setText("pKind", t.shared ? "Shared ride" : t.openRoute ? "Open route" : "Private ride 🔒");
       setText("pKm", t.routeKm + " km");

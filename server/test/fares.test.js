@@ -172,3 +172,95 @@ test('private rides are never shared', async () => {
   await api().post(`/api/trips/${a.id}/cancel`).set(auth(p1)).expect(200);
   await api().post(`/api/trips/${b.id}/cancel`).set(auth(p2)).expect(200);
 });
+
+// ---------- getting off early ----------
+// Between On the way and Kingstown, on the Richland Park → Kingstown line.
+const FURTHER_ON = { lat: 13.1672, lng: -61.2118, name: 'Further on' };
+const preview = async (tok, id, place) => (await api().post(`/api/trips/${id}/destination/preview`).set(auth(tok)).send(place).expect(200)).body;
+const changeDest = async (tok, id, body) => (await api().post(`/api/trips/${id}/destination`).set(auth(tok)).send(body).expect(200)).body;
+const finish = async (drv, id) => (await api().post(`/api/trips/${id}/complete`).set(auth(drv)).expect(200)).body;
+
+test('getting off early on your own: you still pay the booked fare', async () => {
+  const a = (await book(p1, RICHLAND, KINGSTOWN).expect(201)).body;
+  await api().post(`/api/trips/${a.id}/accept`).set(auth(car)).expect(200);
+  const s = await start(car, a);
+  const pv = await preview(p1, a.id, ON_THE_WAY);
+  assert.equal(pv.early, true);
+  assert.equal(pv.fareXcd, s.fareXcd);
+  assert.equal(pv.discountPct, 0);
+  const after = await changeDest(p1, a.id, ON_THE_WAY);
+  assert.equal(after.fareXcd, s.fareXcd);
+  assert.equal(after.earlyDropoff.bookedDest, 'Kingstown');
+  assert.ok(after.fareBreakdown[0].label.includes('trip booked to Kingstown'));
+  // Moving it further again prices the new, longer trip normally
+  const further = await changeDest(p1, a.id, GEORGETOWN);
+  assert.ok(further.fareXcd > s.fareXcd);
+  assert.equal(further.earlyDropoff, null);
+  // Shortening again after extending: the longer trip is now the one booked
+  const back = await changeDest(p1, a.id, ON_THE_WAY);
+  assert.equal(back.fareXcd, further.fareXcd);
+  assert.equal(back.earlyDropoff.bookedDest, 'Georgetown');
+  assert.equal((await finish(car, a.id)).fareXcd, further.fareXcd);
+});
+
+test('private ride getting off early can open up; a new rider on the route gives 15% off', async () => {
+  const a = (await book(p1, RICHLAND, KINGSTOWN, { openRoute: false }).expect(201)).body;
+  await api().post(`/api/trips/${a.id}/accept`).set(auth(car)).expect(200);
+  const s = await start(car, a);
+  const pv = await preview(p1, a.id, ON_THE_WAY);
+  assert.equal(pv.private, true);
+  assert.equal(pv.fareXcd, s.fareXcd);              // stay private: same fare
+  assert.ok(pv.ifOpen.fareXcd < s.fareXcd);          // open up: the +10% private charge goes
+  const opened = await changeDest(p1, a.id, { ...ON_THE_WAY, openRoute: true });
+  assert.equal(opened.openRoute, true);
+  assert.equal(opened.fareXcd, pv.ifOpen.fareXcd);
+  // Someone further along the original route can now be picked up
+  const b = (await book(p2, FURTHER_ON, KINGSTOWN).expect(201)).body;
+  const offered = (await api().get('/api/trips/open').set(auth(car))).body;
+  assert.ok(offered.requests.some(r => r.id === b.id));
+  await api().post(`/api/trips/${b.id}/accept`).set(auth(car)).expect(200);
+  const now = await get(p1, a.id);
+  assert.equal(now.earlyDropoff.discountPct, 15);
+  assert.equal(now.fareXcd, Math.round(opened.fareXcd * 0.85));
+  assert.ok(now.fareBreakdown.some(l => l.xcd < 0 && /15% off/.test(l.label)));
+  assert.equal((await finish(car, a.id)).fareXcd, Math.round(opened.fareXcd * 0.85));
+  await api().post(`/api/trips/${b.id}/cancel`).set(auth(car)).expect(200);
+});
+
+test('shared ride getting off early: 10% off while a group of 2+ is still in the car, gone once they leave', async () => {
+  const a = (await book(p1, RICHLAND, KINGSTOWN).expect(201)).body;
+  const b = (await book(p2, ON_THE_WAY, KINGSTOWN, { partySize: 2 }).expect(201)).body;
+  await api().post(`/api/trips/${a.id}/accept`).set(auth(car)).expect(200);
+  await api().post(`/api/trips/${b.id}/accept`).set(auth(car)).expect(200);   // accepted before a's ride began: not a "new rider"
+  await start(car, a);
+  await start(car, b);
+  const shared = await get(p1, a.id);
+  assert.equal(shared.shared, true);
+  const early = await changeDest(p1, a.id, FURTHER_ON);
+  assert.equal(early.earlyDropoff.discountPct, 10);
+  assert.equal(early.fareXcd, Math.round(shared.fareXcd * 0.9));
+  // The group gets out first: no one is left, so no discount
+  await finish(car, b.id);
+  const alone = await get(p1, a.id);
+  assert.equal(alone.earlyDropoff.discountPct, 0);
+  assert.equal((await finish(car, a.id)).fareXcd, shared.fareXcd);
+  // A finished fare never changes afterwards
+  assert.equal((await get(p1, a.id)).fareXcd, shared.fareXcd);
+});
+
+test('getting off early with two other bookings still in the car: 15% off', async () => {
+  const a = (await book(p1, RICHLAND, KINGSTOWN).expect(201)).body;
+  const b = (await book(p2, ON_THE_WAY, KINGSTOWN).expect(201)).body;
+  const c = (await book(p3, ON_THE_WAY, KINGSTOWN).expect(201)).body;
+  for (const t of [a, b, c]) await api().post(`/api/trips/${t.id}/accept`).set(auth(car)).expect(200);
+  await start(car, a); await start(car, b); await start(car, c);
+  const shared = await get(p1, a.id);
+  const early = await changeDest(p1, a.id, FURTHER_ON);
+  assert.equal(early.earlyDropoff.discountPct, 15);
+  assert.equal(early.fareXcd, Math.round(shared.fareXcd * 0.85));
+  // Only one booking of one person left: no discount for the next early leaver
+  assert.equal((await finish(car, a.id)).fareXcd, Math.round(shared.fareXcd * 0.85));
+  const bEarly = await changeDest(p2, b.id, FURTHER_ON);
+  assert.equal(bEarly.earlyDropoff.discountPct, 0);
+  await finish(car, b.id); await finish(car, c.id);
+});

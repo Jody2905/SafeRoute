@@ -115,26 +115,66 @@ router.post('/trips/:id/stops', requireRole('passenger'), async (req, res) => {
 });
 
 // Passenger changes where they get off: earlier ("drop me here") or further.
-router.post('/trips/:id/destination', requireRole('passenger'), async (req, res) => {
+const DestChange = Place.extend({ openRoute: z.literal(true).optional() });
+
+/** What a drop-off change would do: the new route and fare, without saving it. */
+async function planDestination(t, dest, openRoute) {
+  const route = await routeFor({ lat: t.pickup_lat, lng: t.pickup_lng }, t.stops || [], dest);
+  const routeM = Math.round(routeLength(route));
+  // Moving the drop-off closer than the booked trip: keep pricing the booked trip (and remember it once).
+  const bookedM = t.booked_route_m || t.route_m;
+  // Before a driver accepts, nobody has set the trip aside yet, so a shorter trip simply costs less.
+  const early = routeM < bookedM && t.status !== 'requested';
+  const q = await T.quote(pool, t, { routeM, openRoute: openRoute || t.open_route, bookedM: early ? bookedM : null,
+    bookedDest: t.booked_dest_name || t.dest_name });
+  return { route, routeM, early, q };
+}
+
+// Passenger checks the price of a new drop-off before changing it.
+router.post('/trips/:id/destination/preview', requireRole('passenger'), async (req, res) => {
   const dest = Place.parse(req.body);
   const t = await mine(req, res);
   if (!t) return;
   if (!T.ACTIVE.includes(t.status)) return err(res, 409, 'This trip has ended');
   if (!checkPlaces(res, [dest])) return;
+  const p = await planDestination(t, dest);
+  const out = { fareXcd: p.q.total, lines: p.q.lines, discountPct: p.q.discountPct, early: p.early, currentFareXcd: t.fare_xcd,
+    routeKm: Math.round(p.routeM / 100) / 10, private: !t.open_route };
+  // A private ride getting off early can open up, so the driver can take someone on the rest of the route.
+  if (p.early && !t.open_route) out.ifOpen = { fareXcd: (await planDestination(t, dest, true)).q.total };
+  res.json(out);
+});
+
+// Passenger changes where they get off: earlier ("drop me here") or further.
+router.post('/trips/:id/destination', requireRole('passenger'), async (req, res) => {
+  const body = DestChange.parse(req.body);
+  const dest = { lat: body.lat, lng: body.lng, name: body.name };
+  const t = await mine(req, res);
+  if (!t) return;
+  if (!T.ACTIVE.includes(t.status)) return err(res, 409, 'This trip has ended');
+  if (!checkPlaces(res, [dest])) return;
   if (haversine([t.pickup_lat, t.pickup_lng], pt(dest)) < 200) return err(res, 400, 'That is too close to your pickup');
-  await replan(t, t.stops || [], dest, true);
-  await audit(pool, req.user.id, 'trip.dest_change', t.id, { from: t.dest_name, to: dest.name });
+  const p = await planDestination(t, dest, body.openRoute);
+  await pool.query(
+    `UPDATE trips SET dest_lat = $2, dest_lng = $3, dest_name = $4, route = $5, route_m = $6, dest_changes = dest_changes + 1,
+                      off_route_since = NULL, open_route = open_route OR $7,
+                      booked_route = $8, booked_route_m = $9, booked_dest_name = $10 WHERE id = $1`,
+    [t.id, dest.lat, dest.lng, dest.name, JSON.stringify(p.route), p.routeM, !!body.openRoute,
+     p.early ? JSON.stringify(t.booked_route || t.route) : null, p.early ? (t.booked_route_m || t.route_m) : null,
+     p.early ? (t.booked_dest_name || t.dest_name) : null]);
+  await T.reprice(pool, t.id);
+  await audit(pool, req.user.id, 'trip.dest_change', t.id, { from: t.dest_name, to: dest.name, early: p.early, opened: !!body.openRoute && !t.open_route });
   await live.tripChanged(t.id);
+  if (body.openRoute && !t.open_route) live.requestsChanged();
   res.json(await viewFor(req, t.id));
 });
 
-/** New planned route and fare after a stop or drop-off change. Driver detours never reach this. */
-async function replan(t, stops, dest, destChanged = false) {
+/** New planned route and fare after a stop is added. Driver detours never reach this. */
+async function replan(t, stops, dest) {
   const route = await routeFor({ lat: t.pickup_lat, lng: t.pickup_lng }, stops, dest);
   await pool.query(
-    `UPDATE trips SET stops = $2, dest_lat = $3, dest_lng = $4, dest_name = $5, route = $6, route_m = $7,
-                      dest_changes = dest_changes + $8, off_route_since = NULL WHERE id = $1`,
-    [t.id, JSON.stringify(stops), dest.lat, dest.lng, dest.name, JSON.stringify(route), Math.round(routeLength(route)), destChanged ? 1 : 0]);
+    `UPDATE trips SET stops = $2, dest_lat = $3, dest_lng = $4, dest_name = $5, route = $6, route_m = $7, off_route_since = NULL WHERE id = $1`,
+    [t.id, JSON.stringify(stops), dest.lat, dest.lng, dest.name, JSON.stringify(route), Math.round(routeLength(route))]);
   await T.reprice(pool, t.id);
 }
 
@@ -158,7 +198,7 @@ router.get('/trips/history', async (req, res) => {
 async function driverState(db, driverId) {
   const { rows: [d] } = await db.query('SELECT vehicle_type, seats, verified FROM drivers WHERE user_id = $1', [driverId]);
   const { rows: active } = await db.query(
-    `SELECT id, group_id, party_size, open_route, route, status FROM trips
+    `SELECT id, group_id, party_size, open_route, COALESCE(booked_route, route) AS route, status FROM trips
       WHERE driver_id = $1 AND status IN ('accepted', 'arrived', 'in_progress') ORDER BY accepted_at`, [driverId]);
   const used = active.reduce((n, t) => n + t.party_size, 0);
   return { vehicleType: d.vehicle_type, seats: d.seats, active, free: d.seats - used,
@@ -230,8 +270,10 @@ router.post('/trips/:id/accept', requireRole('driver'), async (req, res) => {
   if (result.code !== 200) return err(res, result.code, result.error);
   await audit(pool, req.user.id, 'trip.accept', req.params.id, { joinedSharedRide: result.joined });
   live.requestsChanged();
+  const { rows: [g] } = await pool.query('SELECT group_id FROM trips WHERE id = $1', [req.params.id]);
+  const repriced = await T.repriceGroup(pool, g && g.group_id);
   await live.tripChanged(req.params.id);
-  for (const id of result.others) await live.tripChanged(id);
+  for (const id of new Set([...result.others, ...repriced])) if (id !== req.params.id) await live.tripChanged(id);
   res.json(await viewFor(req, req.params.id));
 });
 
@@ -303,7 +345,7 @@ router.post('/trips/:id/start', requireRole('driver'), async (req, res) => {
       sharedWith = rows.map(r => r.id);
       if (sharedWith.length) {
         await db.query('UPDATE trips SET shared = true WHERE id = ANY($1::uuid[])', [[t.id, ...sharedWith]]);
-        for (const id of [t.id, ...sharedWith]) await T.reprice(db, id);
+        await T.repriceGroup(db, t.group_id);
       }
     }
     await audit(db, req.user.id, 'trip.start', t.id, { shared: sharedWith.length > 0 });
@@ -319,7 +361,9 @@ router.post('/trips/:id/complete', requireRole('driver'), async (req, res) => {
   const t = await mine(req, res);
   if (!t) return;
   if (t.status !== 'in_progress') return err(res, 409, 'This trip has not started');
+  await T.reprice(pool, t.id);   // the early drop-off discount counts who is in the car right now
   await pool.query(`UPDATE trips SET status = 'completed', completed_at = now() WHERE id = $1`, [t.id]);
+  for (const id of await T.repriceGroup(pool, t.group_id)) await live.tripChanged(id);
   await pool.query(`UPDATE alerts SET status = 'ok', resolved_at = now() WHERE trip_id = $1 AND status = 'open'`, [t.id]);
   await audit(pool, req.user.id, 'trip.complete', t.id);
   await live.tripChanged(t.id);
@@ -335,6 +379,7 @@ router.post('/trips/:id/cancel', async (req, res) => {
   if (!allowed.includes(t.status)) return err(res, 409, t.status === 'in_progress' ? 'A trip in progress can only be ended by the driver, or use SOS' : 'This trip can\'t be cancelled now');
   await pool.query(`UPDATE trips SET status = 'cancelled', cancelled_at = now() WHERE id = $1`, [t.id]);
   await audit(pool, req.user.id, 'trip.cancel', t.id, { by: req.user.role, from: t.status });
+  for (const id of await T.repriceGroup(pool, t.group_id)) await live.tripChanged(id);
   live.requestsChanged();
   await live.tripChanged(t.id);
   res.json(await viewFor(req, t.id));

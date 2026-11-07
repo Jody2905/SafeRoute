@@ -57,7 +57,8 @@ async function views(tripId, db = pool) {
     vehicleType: t.vehicle_type,
     openRoute: t.open_route,
     shared: t.shared,
-    othersInCar: t.others_in_car,      // other bookings currently in or heading to the same car (no names: privacy)
+    othersInCar: t.others_in_car,
+    earlyDropoff: t.booked_dest_name && t.booked_route_m > t.route_m ? { bookedDest: t.booked_dest_name, discountPct: t.discount_pct } : null,      // other bookings currently in or heading to the same car (no names: privacy)
     stops: (t.stops || []).map(p => ({ name: p.name, lat: p.lat, lng: p.lng })),
     driver: t.driver_id ? { name: firstName(t.driver_name) + (t.driver_name.split(' ')[1] ? ' ' + t.driver_name.split(' ')[1][0] + '.' : ''), vehicle: t.vehicle, plate: t.plate, rating: t.rating, vehicleType: t.driver_vehicle_type, seats: t.driver_seats } : null,
     position: live && t.last_lat != null ? { lat: t.last_lat, lng: t.last_lng, speedKmh: t.last_speed_kmh, at: t.last_at } : null,
@@ -171,12 +172,40 @@ async function purgeOldLocations(db = pool) {
 }
 
 /** Works the fare out again from the booking's planned route and options, and saves it. */
+/** Work out a booking's fare from its current state. `over` lets a preview try a new route without saving. */
+async function quote(db, t, over = {}) {
+  const routeM = over.routeM ?? t.route_m, openRoute = over.openRoute ?? t.open_route;
+  const bookedM = over.bookedM !== undefined ? over.bookedM : t.booked_route_m;
+  const stops = over.stops ?? (t.stops || []).length;
+  const opts = { partySize: t.party_size, openRoute, shared: t.shared, stops };
+  // Getting off early: price the trip as booked, then any discount.
+  if (bookedM && routeM < bookedM) {
+    let others = [];
+    if (t.group_id) {
+      const { rows } = await db.query('SELECT status, party_size, accepted_at FROM trips WHERE group_id = $1 AND id <> $2', [t.group_id, t.id]);
+      others = rows.map(r => ({ status: r.status, partySize: r.party_size, acceptedAt: r.accepted_at }));
+    }
+    const d = pricing.earlyDiscount({ startedAt: t.started_at, others });
+    return { ...pricing.withDiscount(pricing.price({ routeM: bookedM, ...opts }), d, over.bookedDest || t.booked_dest_name), discountPct: d.pct, early: true };
+  }
+  return { ...pricing.price({ routeM, ...opts }), discountPct: 0, early: false };
+}
+
 async function reprice(db, tripId) {
-  const { rows: [t] } = await db.query('SELECT route_m, party_size, open_route, shared, stops FROM trips WHERE id = $1', [tripId]);
-  if (!t) return null;
-  const q = pricing.price({ routeM: t.route_m, partySize: t.party_size, openRoute: t.open_route, shared: t.shared, stops: (t.stops || []).length });
-  await db.query('UPDATE trips SET fare_xcd = $2, base_xcd = $3, fare_breakdown = $4 WHERE id = $1', [tripId, q.total, q.base, JSON.stringify(q.lines)]);
+  const { rows: [t] } = await db.query('SELECT * FROM trips WHERE id = $1', [tripId]);
+  if (!t || ['completed', 'cancelled'].includes(t.status)) return null;   // a finished fare never changes
+  const q = await quote(db, t);
+  await db.query('UPDATE trips SET fare_xcd = $2, base_xcd = $3, fare_breakdown = $4, discount_pct = $5 WHERE id = $1',
+    [tripId, q.total, q.base, JSON.stringify(q.lines), q.discountPct]);
   return q;
 }
 
-module.exports = { reprice, ACTIVE, LIVE, hashToken, loadTrip, views, activeTripId, tripIdForShareToken, checkAlerts, raise, escalateUnanswered, purgeOldLocations };
+/** Reprice every active booking in a car (an early drop-off discount depends on who else is in it). Returns the ids. */
+async function repriceGroup(db, groupId) {
+  if (!groupId) return [];
+  const { rows } = await db.query(`SELECT id FROM trips WHERE group_id = $1 AND status IN ('accepted','arrived','in_progress')`, [groupId]);
+  for (const r of rows) await reprice(db, r.id);
+  return rows.map(r => r.id);
+}
+
+module.exports = { quote, reprice, repriceGroup, ACTIVE, LIVE, hashToken, loadTrip, views, activeTripId, tripIdForShareToken, checkAlerts, raise, escalateUnanswered, purgeOldLocations };

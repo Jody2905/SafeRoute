@@ -184,7 +184,7 @@
   }
 
   // ---------- fare, stops and drop-off ----------
-  var money = function (n) { return "EC$" + (Math.round(n * 100) % 100 ? Number(n).toFixed(2) : n); };
+  var money = function (n) { var a = Math.abs(n); return (n < 0 ? "−" : "") + "EC$" + (Math.round(a * 100) % 100 ? a.toFixed(2) : a); };
   var lastFare = null, editMode = null;
   function renderFare(t) {
     var sec = $("fareSection");
@@ -196,6 +196,8 @@
       '<div class="fare-line total"><span>Total</span><span>EC$' + t.fareXcd + "</span></div>");
     var note = $("fareNote"), parts = [];
     note.className = "fare-note" + (t.shared ? " shared" : "");
+    if (t.earlyDropoff) parts.push("🚏 You're getting off before " + t.earlyDropoff.bookedDest + ", so you pay for the trip you booked" +
+      (t.earlyDropoff.discountPct ? ", with " + t.earlyDropoff.discountPct + "% off." : ". You get 15% off if the driver picks up a new rider on your route before you get out, or if 2 other bookings are still in the car (10% if it's 1 group of 2 or more)."));
     if (t.shared) parts.push("🤝 Shared ride: you're sharing the car with " + t.othersInCar + " other booking" + (t.othersInCar === 1 ? "" : "s") + ", so you pay the shared price.");
     else if (t.openRoute && t.status !== "completed") parts.push("🛣 Open route: if another passenger going your way joins, your fare drops to the shared price.");
     else if (!t.openRoute) parts.push("🔒 Private ride: no one else is added, and your car isn't shown to other passengers until your trip ends.");
@@ -221,6 +223,20 @@
     setText("editGo", mode === "stop" ? "Add stop" : "Change");
     $("editPlace").focus();
   }
+  function changeDest(place, msg) {
+    var p = { lat: place.lat, lng: place.lng, name: place.name };
+    return SR.api("/api/trips/" + trip.id + "/destination/preview", { body: p }).then(function (q) {
+      var body = Object.assign({}, p), text;
+      if (!q.early) text = "Change your drop-off to " + place.name + "? Your fare will be EC$" + q.fareXcd + " (now EC$" + q.currentFareXcd + ").";
+      else if (q.discountPct) text = "Get off early at " + place.name + "? You'll pay EC$" + q.fareXcd + " (" + q.discountPct + "% off the trip you booked).";
+      else text = "Get off early at " + place.name + "? You'll still pay EC$" + q.fareXcd + ", the fare for the trip you booked. You get 15% off if the driver picks up a new rider on your route before you get out.";
+      if (!window.confirm(text)) return;
+      if (q.ifOpen && window.confirm("Open your route so the driver can pick someone up on the rest of your way?\n\nYour fare becomes EC$" + q.ifOpen.fareXcd +
+          " (no private-ride charge), and if they pick someone up before you get out, you get 15% off.\n\nOK = open my route · Cancel = stay private")) body.openRoute = true;
+      return SR.api("/api/trips/" + trip.id + "/destination", { body: body })
+        .then(function (t) { closeEdit(); render(t); toast("🗺", msg + " Your fare is EC$" + t.fareXcd + "."); });
+    }).catch(function (e) { toast("⚠️", e.message); });
+  }
   function changeTrip(path, place, msg) {
     return SR.api("/api/trips/" + trip.id + path, { body: { lat: place.lat, lng: place.lng, name: place.name } })
       .then(function (t) { closeEdit(); render(t); toast("🗺", msg + " New fare EC$" + t.fareXcd + "."); })
@@ -235,8 +251,7 @@
     $("btnDropHere").addEventListener("click", function () {
       if (!trip || !trip.position) return;
       var p = trip.position, near = SR_nearestPlace(p.lat, p.lng);
-      if (!window.confirm("Get off here, near " + near.name + "? Your fare will be worked out to this point.")) return;
-      changeTrip("/destination", { lat: p.lat, lng: p.lng, name: "Near " + near.name }, "Drop-off changed to here.");
+      changeDest({ lat: p.lat, lng: p.lng, name: "Near " + near.name }, "Drop-off changed to here.");
     });
     $("editForm").addEventListener("submit", function (e) {
       e.preventDefault();
@@ -244,7 +259,7 @@
       var place = SR_PLACES.filter(function (p) { return p.name.toLowerCase() === n; })[0];
       if (!place) return toast("⚠️", "Choose a place from the list.");
       if (editMode === "stop") changeTrip("/stops", place, "Stop added at " + place.name + ".");
-      else changeTrip("/destination", place, "Drop-off changed to " + place.name + ".");
+      else changeDest(place, "Drop-off changed to " + place.name + ".");
     });
   })();
 
