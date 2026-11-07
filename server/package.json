@@ -12,7 +12,7 @@
     "db:setup": "node db/setup.js",
     "db:reset": "node db/reset.js",
     "start:render": "node db/setup.js && node src/index.js",
-    "test": "node --test --test-concurrency=1 test/api.test.js"
+    "test": "node --test --test-concurrency=1 test/api.test.js test/fares.test.js"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",

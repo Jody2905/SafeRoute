@@ -88,6 +88,7 @@
   .badge{font-size:.62rem;font-weight:700;padding:2px 8px;border-radius:50px;}
   .b-g{background:rgba(0,229,160,.1);color:var(--accent);}
   .b-b{background:rgba(0,128,255,.1);color:var(--accent2);}
+  .b-y{background:rgba(255,184,0,.12);color:#ffb800;}
   .b-w{background:rgba(255,159,67,.1);color:var(--warn);}
   .b-r{background:rgba(255,71,87,.1);color:var(--danger);}
   .btn-p{background:var(--accent);color:#000;border:none;border-radius:11px;padding:.72rem 1.4rem;font-family:'Syne',sans-serif;font-weight:700;font-size:.85rem;cursor:none;transition:all .2s;}
@@ -314,20 +315,32 @@ SR.ready().then(function (live) {
   function card(r, i) {
     var mins = Math.max(1, Math.round(r.km / 30 * 60));
     return '<div class="req-card' + (i === 0 ? ' urgent' : '') + '">' +
-      '<div class="req-head"><div class="req-num">' + (i + 1) + '</div><span class="badge b-b">' + (r.awayKm != null ? r.awayKm + ' km away' : 'New request') + '</span></div>' +
+      '<div class="req-head"><div class="req-num">' + (i + 1) + '</div><span class="badge b-b">' + (r.awayKm != null ? r.awayKm + ' km away' : 'New request') + '</span>' +
+        (r.onYourRoute ? ' <span class="badge b-g">🛣 On your route</span>' : '') +
+        (r.openRoute ? '' : ' <span class="badge b-y">🔒 Private ride</span>') +
+        ' <span class="badge b-b">' + ({ car: '🚕 Car', suv: '🚙 SUV', van: '🚐 Van' })[r.vehicleType] + '</span></div>' +
       '<div class="req-route">' + esc(r.pickupName) + ' → ' + esc(r.destName) + '</div>' +
       '<div class="req-passenger"><div class="pass-av">🧑🏽</div><div style="flex:1;"><span style="font-weight:500;">' + esc(r.passengerName) + '</span> <span style="color:var(--muted);font-size:.72rem;">Passenger · requested ' + new Date(r.requestedAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) + '</span></div></div>' +
-      '<div class="req-meta"><span>📍 Pickup: <b>' + esc(r.pickupName) + '</b></span><span>🏁 Drop: <b>' + esc(r.destName) + '</b></span><span>📏 <b>' + r.km + ' km</b></span><span>⏱ ~' + mins + ' min</span><span>💵 Fare: <b>EC$' + r.fareXcd + '</b></span></div>' +
+      '<div class="req-meta"><span>📍 Pickup: <b>' + esc(r.pickupName) + '</b></span><span>🏁 Drop: <b>' + esc(r.destName) + '</b></span><span>👥 <b>' + r.partySize + (r.partySize === 1 ? ' passenger' : ' passengers') + '</b></span><span>📏 <b>' + r.km + ' km</b></span><span>⏱ ~' + mins + ' min</span><span>💵 Fare: <b>EC$' + r.fareXcd + '</b></span></div>' +
       '<div class="req-btns"><button class="btn-accept" data-accept="' + esc(r.id) + '">✅ Accept Ride</button></div></div>';
   }
   function load() {
-    SR.api('/api/trips/current').then(function (t) {
-      if (t) { list.innerHTML = '<div class="req-card urgent"><div class="req-route">You have a trip in progress</div><div class="req-meta"><span>' + esc(t.pickupName) + ' → ' + esc(t.dest.name) + '</span></div><div class="req-btns"><button class="btn-accept" onclick="go(\'saferoute-driver-trip.html\')">🗺 Go to my trip</button></div></div>'; return; }
+    SR.api('/api/driver/trips').then(function (mine) {
       var q = here ? '?lat=' + here.latitude + '&lng=' + here.longitude : '';
-      return SR.api('/api/trips/open' + q).then(function (rows) {
-        list.innerHTML = rows.length ? rows.map(card).join('') : '<div class="req-card"><div class="req-route">No ride requests right now</div><div class="req-meta"><span>New requests appear here instantly. Keep this page open.</span></div></div>';
+      return SR.api('/api/trips/open' + q).then(function (res) {
+        var rows = res.requests, onTrip = mine && mine.length;
+        var banner = onTrip ? '<div class="req-card urgent"><div class="req-route">' + (mine.length === 1 ? 'You have a passenger booking' : 'You have ' + mine.length + ' passenger bookings') + '</div>' +
+          '<div class="req-meta">' + mine.map(function (t) { return '<span>' + esc(t.pickupName) + ' → ' + esc(t.dest.name) + ' · ' + t.partySize + ' 👥</span>'; }).join('') +
+          '<span>💺 <b>' + res.seatsFree + ' of ' + res.seats + ' seats free</b></span></div>' +
+          '<div class="req-btns"><button class="btn-accept" onclick="go(\'saferoute-driver-trip.html\')">🗺 Go to my trip</button></div></div>' : '';
+        var empty = onTrip
+          ? (res.seatsFree ? '<div class="req-card"><div class="req-route">No one else going your way yet</div><div class="req-meta"><span>Open-route passengers heading the same direction show up here. Private rides never do.</span></div></div>' : '')
+          : '<div class="req-card"><div class="req-route">No ride requests right now</div><div class="req-meta"><span>New requests appear here instantly. Keep this page open.</span></div></div>';
+        list.innerHTML = banner + (rows.length ? rows.map(card).join('') : empty);
         var sub = document.getElementById('reqSub');
-        if (sub) sub.textContent = rows.length ? rows.length + ' request' + (rows.length === 1 ? '' : 's') + ' waiting · first driver to accept gets the ride' : 'No requests waiting · new ones appear instantly';
+        if (sub) sub.textContent = onTrip
+          ? (res.seatsFree ? res.seatsFree + ' seat' + (res.seatsFree === 1 ? '' : 's') + ' free · ' + rows.length + ' passenger' + (rows.length === 1 ? '' : 's') + ' going your way' : 'Your car is full')
+          : rows.length ? rows.length + ' request' + (rows.length === 1 ? '' : 's') + ' waiting · first driver to accept gets the ride' : 'No requests waiting · new ones appear instantly';
         var nib = document.querySelector('.ni.active .nib'); if (nib) nib.textContent = rows.length;
       });
     }).catch(function (e) { list.innerHTML = '<div class="req-card"><div class="req-route">' + esc(e.message) + '</div></div>'; });
@@ -336,7 +349,7 @@ SR.ready().then(function (live) {
     var b = e.target.closest('[data-accept]'); if (!b) return;
     b.disabled = true;
     SR.api('/api/trips/' + b.dataset.accept + '/accept', { body: {} })
-      .then(function () { showToast('✅', 'Ride accepted. Head to the pickup.'); setTimeout(function () { go('saferoute-driver-trip.html'); }, 700); })
+      .then(function (t) { showToast('✅', t && t.othersInCar > 0 ? 'Added to your ride. Pick them up on the way.' : 'Ride accepted. Head to the pickup.'); setTimeout(function () { go('saferoute-driver-trip.html'); }, 700); })
       .catch(function (err) { showToast('⚠️', err.message); load(); });
   });
   load();

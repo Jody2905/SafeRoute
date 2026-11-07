@@ -1,12 +1,13 @@
 -- SafeRoute database schema (PostgreSQL / Neon).
+-- Later changes live in db/migrations/ and are applied on top by db/migrate.js.
 -- WARNING: this file drops and recreates every table. db/setup.js only runs it on an empty database;
 -- db/reset.js runs it on purpose to start over.
 
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 CREATE EXTENSION IF NOT EXISTS citext;
 
-DROP TABLE IF EXISTS audit_log, alerts, trip_points, trips, trusted_contacts, drivers, users CASCADE;
-DROP TYPE IF EXISTS user_role, trip_status, alert_kind, alert_status CASCADE;
+DROP TABLE IF EXISTS schema_migrations, audit_log, alerts, trip_points, trips, trusted_contacts, drivers, users CASCADE;
+DROP TYPE IF EXISTS user_role, trip_status, alert_kind, alert_status, vehicle_type CASCADE;
 
 CREATE TYPE user_role    AS ENUM ('passenger', 'driver', 'admin');
 CREATE TYPE trip_status  AS ENUM ('requested', 'accepted', 'arrived', 'in_progress', 'completed', 'cancelled');

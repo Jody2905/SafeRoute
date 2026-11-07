@@ -17,7 +17,25 @@ The free server sleeps when idle, so the first visit can take up to a minute.
 5. On the passenger's phone, tap **Share Link** and open it on a third device: a trusted contact sees the taxi, driver, car and plate, but not the PIN or the exact pickup address.
 6. **Complete trip** on the driver's phone. Everyone sees "Arrived safely", and the share link stops working.
 
+**Shared ride:** book a second ride as `passenger2@example.com` from a place on the first passenger's way, with **Open route** on. Once the first passenger is in the car, the driver sees it as **On your route**, picks them up, and both fares drop to the shared price after the second PIN. `driver3@example.com` drives a 14-seat van for bigger groups.
+
 You can also create your own passenger or driver account. Without the server (opening the files from your computer, or adding `?demo`), every page runs a built-in demo trip instead.
+
+## Fares
+
+Prices are in EC$ and worked out by the server from the planned road route.
+
+| Rule | Price |
+|---|---|
+| **Ride fare** | EC$8 plus EC$2.50 per km, at least EC$10 |
+| **Extra people on your booking** | 1/3 of the ride fare each |
+| **Private ride** (Open route off) | +10%. No one else is added, and the car isn't shown to other passengers until the trip ends |
+| **Shared ride** (two bookings in one car) | Each booking pays 2/3 of its own ride fare, plus 15% of it for each extra person. A EC$60 ride with one extra person costs 40 + 9 = EC$49 |
+| **Extra stops** | EC$3 each, up to 3 |
+| **Changing the drop-off** | The fare is worked out again for the new route. "Drop me here" uses the taxi's position |
+| **Driver detours** | Never charged: the fare only uses the planned route |
+
+Seats depend on the vehicle: car 4, SUV 6, van 14. A shared ride only matches someone whose pickup is within about 1 km of the route and who is heading the same way, and only while there are enough free seats. Private bookings are never shared.
 
 ## How safety works
 

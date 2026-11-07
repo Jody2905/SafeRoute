@@ -34,22 +34,41 @@ function straightLine(a, b, steps = 20) {
   return out;
 }
 
-/** Road route from the public OSRM server, or a straight line if it can't be reached. */
-async function planRoute(from, to) {
-  if (process.env.NODE_ENV === 'test' || process.env.OFFLINE_ROUTES === 'true') return straightLine(from, to);
-  const url = `https://router.project-osrm.org/route/v1/driving/${from[1]},${from[0]};${to[1]},${to[0]}?overview=full&geometries=geojson`;
+/** Road route through the given points (pickup, any stops, drop-off) from the public OSRM server.
+ *  Falls back to straight lines between the points if OSRM can't be reached. */
+async function planRouteVia(points) {
+  const fallback = () => points.slice(1).reduce((acc, p, i) => acc.concat(straightLine(points[i], p).slice(i ? 1 : 0)), []);
+  if (process.env.NODE_ENV === 'test' || process.env.OFFLINE_ROUTES === 'true') return fallback();
+  const coords = points.map(p => `${p[1]},${p[0]}`).join(';');
+  const url = `https://router.project-osrm.org/route/v1/driving/${coords}?overview=full&geometries=geojson`;
   try {
     const r = await fetch(url, { signal: AbortSignal.timeout(6000), headers: { 'User-Agent': 'SafeRoute/0.1 (portfolio project)' } });
     const j = await r.json();
-    const coords = j.routes && j.routes[0] && j.routes[0].geometry.coordinates;
-    if (!coords || coords.length < 2) throw new Error('no route');
+    const c = j.routes && j.routes[0] && j.routes[0].geometry.coordinates;
+    if (!c || c.length < 2) throw new Error('no route');
     // Keep at most ~400 points so the route stays small in the database.
-    const step = Math.max(1, Math.ceil(coords.length / 400));
-    const pts = coords.filter((_, i) => i % step === 0 || i === coords.length - 1).map(c => [c[1], c[0]]);
-    return pts;
+    const step = Math.max(1, Math.ceil(c.length / 400));
+    return c.filter((_, i) => i % step === 0 || i === c.length - 1).map(x => [x[1], x[0]]);
   } catch {
-    return straightLine(from, to);
+    return fallback();
   }
+}
+const planRoute = (from, to) => planRouteVia([from, to]);
+
+/**
+ * Does a new booking go the same way as a route the car is already driving?
+ * Its pickup must be within `maxM` of the route, and its drop-off within `maxM` of the route
+ * or near the route's end, and further along the route than the pickup.
+ */
+function sameDirection(route, pickup, dest, maxM = 1000) {
+  const nearest = p => {
+    let best = -1, bd = Infinity;
+    route.forEach((q, i) => { const d = haversine(p, q); if (d < bd) { bd = d; best = i; } });
+    return { i: best, d: bd };
+  };
+  const a = nearest(pickup), b = nearest(dest);
+  const endNear = haversine(dest, route[route.length - 1]) <= maxM * 1.5;
+  return a.d <= maxM && (b.d <= maxM || endNear) && b.i >= a.i;
 }
 
 /** Taxi fare in EC$: EC$8 base plus EC$2.50 a km, rounded to the nearest dollar. */
@@ -58,4 +77,4 @@ const fareFor = metres => Math.max(10, Math.round(8 + 2.5 * (metres / 1000)));
 // St. Vincent and the Grenadines, roughly (main island plus the Grenadines down to Union Island).
 const inSVG = (lat, lng) => lat > 12.4 && lat < 13.45 && lng > -61.5 && lng < -61.0;
 
-module.exports = { haversine, routeLength, distanceToRoute, straightLine, planRoute, fareFor, inSVG };
+module.exports = { haversine, routeLength, distanceToRoute, straightLine, planRoute, planRouteVia, sameDirection, fareFor, inSVG };

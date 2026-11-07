@@ -45,12 +45,23 @@
   // ---------- state ----------
   var trip = null, lastStatus = null, shownAlerts = {}, logged = 0;
 
+  var drawnKey = null, stopLayer = null;
   function drawStatic(t) {
     var pick = [t.pickup.lat, t.pickup.lng], dest = [t.dest.lat, t.dest.lng];
     if (!pickupM) pickupM = L.marker(pick, { icon: icon("", "sr-pickup", [16, 16]), title: "Pickup" }).addTo(map).bindTooltip("Pickup · " + t.pickup.name);
-    if (!destM) destM = L.marker(dest, { icon: icon("📍", "sr-dest"), title: "Destination" }).addTo(map)
-      .bindTooltip(t.dest.name, { permanent: true, direction: "right", offset: [14, 0], className: "sr-label" });
-    if (!routeLine && t.route && t.route.length) routeLine = L.polyline(t.route, { color: "#0080ff", weight: 5, opacity: 0.6 }).addTo(map);
+    // Redraw the drop-off, stops and route whenever the passenger changes them.
+    var key = [t.dest.lat, t.dest.lng, (t.stops || []).length, t.route ? t.route.length : 0, t.routeKm].join("|");
+    if (key !== drawnKey) {
+      drawnKey = key;
+      if (destM) map.removeLayer(destM);
+      if (routeLine) { map.removeLayer(routeLine); routeLine = null; }
+      if (stopLayer) map.removeLayer(stopLayer);
+      destM = L.marker(dest, { icon: icon("📍", "sr-dest"), title: "Destination" }).addTo(map)
+        .bindTooltip(t.dest.name, { permanent: true, direction: "right", offset: [14, 0], className: "sr-label" });
+      stopLayer = L.layerGroup().addTo(map);
+      (t.stops || []).forEach(function (p, i) { L.marker([p.lat, p.lng], { icon: icon("", "sr-stop", [13, 13]), title: "Stop" }).addTo(stopLayer).bindTooltip("Stop " + (i + 1) + " · " + p.name); });
+      if (t.route && t.route.length) routeLine = L.polyline(t.route, { color: "#0080ff", weight: 5, opacity: 0.6 }).addTo(map);
+    }
     if (!fitted) {
       var b = L.latLngBounds([pick, dest]);
       if (t.position) b.extend([t.position.lat, t.position.lng]);
@@ -155,6 +166,8 @@
       end.textContent = canCancel ? "✕ Cancel this ride" : t.status === "in_progress" ? "🏁 Your driver ends the trip when you arrive" : "🚕 Book another ride";
     }
 
+    renderFare(t);
+
     // Alerts from the server
     (t.alerts || []).forEach(function (a) { if (!shownAlerts[a.id]) { shownAlerts[a.id] = true; showAlert(a); } });
 
@@ -169,6 +182,71 @@
       lastStatus = t.status;
     }
   }
+
+  // ---------- fare, stops and drop-off ----------
+  var money = function (n) { return "EC$" + (Math.round(n * 100) % 100 ? Number(n).toFixed(2) : n); };
+  var lastFare = null, editMode = null;
+  function renderFare(t) {
+    var sec = $("fareSection");
+    if (!sec) return;
+    sec.hidden = t.status === "cancelled";
+    var lines = t.fareBreakdown || [{ label: "Ride fare", xcd: t.fareXcd }];
+    setText("fareTitle", t.status === "completed" ? "You paid" : "Your fare");
+    setHTML("fareLines", lines.map(function (l) { return '<div class="fare-line"><span>' + esc(l.label) + "</span><span>" + money(l.xcd) + "</span></div>"; }).join("") +
+      '<div class="fare-line total"><span>Total</span><span>EC$' + t.fareXcd + "</span></div>");
+    var note = $("fareNote"), parts = [];
+    note.className = "fare-note" + (t.shared ? " shared" : "");
+    if (t.shared) parts.push("🤝 Shared ride: you're sharing the car with " + t.othersInCar + " other booking" + (t.othersInCar === 1 ? "" : "s") + ", so you pay the shared price.");
+    else if (t.openRoute && t.status !== "completed") parts.push("🛣 Open route: if another passenger going your way joins, your fare drops to the shared price.");
+    else if (!t.openRoute) parts.push("🔒 Private ride: no one else is added, and your car isn't shown to other passengers until your trip ends.");
+    parts.push(t.partySize + (t.partySize === 1 ? " passenger" : " passengers") + " · " + ({ car: "Car", suv: "SUV", van: "Van" }[t.vehicleType] || "Car") + " · " + t.routeKm + " km planned. Driver detours are never charged.");
+    note.textContent = parts.join(" ");
+    var canEdit = ["requested", "accepted", "arrived", "in_progress"].indexOf(t.status) >= 0;
+    show("tripEdit", canEdit);
+    if (!canEdit) closeEdit();
+    $("btnAddStop").disabled = (t.stops || []).length >= 3;
+    $("btnAddStop").textContent = (t.stops || []).length >= 3 ? "3 stops max" : "＋ Add a stop";
+    show("btnDropHere", t.status === "in_progress" && !!t.position);
+    if (lastFare != null && t.fareXcd !== lastFare) toast("💵", "Your fare is now EC$" + t.fareXcd + (t.fareXcd < lastFare ? " (down from EC$" + lastFare + ")" : " (was EC$" + lastFare + ")"));
+    lastFare = t.fareXcd;
+  }
+  function show(id, on) { var el = $(id); if (el) el.hidden = !on; }
+  function closeEdit() { editMode = null; show("editForm", false); }
+  function openEdit(mode) {
+    if (editMode === mode) return closeEdit();
+    editMode = mode;
+    show("editForm", true);
+    $("editPlace").value = "";
+    $("editPlace").placeholder = mode === "stop" ? "Where should the driver stop?" : "Where do you want to get off?";
+    setText("editGo", mode === "stop" ? "Add stop" : "Change");
+    $("editPlace").focus();
+  }
+  function changeTrip(path, place, msg) {
+    return SR.api("/api/trips/" + trip.id + path, { body: { lat: place.lat, lng: place.lng, name: place.name } })
+      .then(function (t) { closeEdit(); render(t); toast("🗺", msg + " New fare EC$" + t.fareXcd + "."); })
+      .catch(function (e) { toast("⚠️", e.message); });
+  }
+  (function setupEdit() {
+    var dl = $("trackPlaces");
+    if (!dl || !$("editForm")) return;
+    SR_PLACES.forEach(function (p) { var o = document.createElement("option"); o.value = p.name; dl.appendChild(o); });
+    $("btnAddStop").addEventListener("click", function () { openEdit("stop"); });
+    $("btnChangeDest").addEventListener("click", function () { openEdit("dest"); });
+    $("btnDropHere").addEventListener("click", function () {
+      if (!trip || !trip.position) return;
+      var p = trip.position, near = SR_nearestPlace(p.lat, p.lng);
+      if (!window.confirm("Get off here, near " + near.name + "? Your fare will be worked out to this point.")) return;
+      changeTrip("/destination", { lat: p.lat, lng: p.lng, name: "Near " + near.name }, "Drop-off changed to here.");
+    });
+    $("editForm").addEventListener("submit", function (e) {
+      e.preventDefault();
+      var n = $("editPlace").value.trim().toLowerCase();
+      var place = SR_PLACES.filter(function (p) { return p.name.toLowerCase() === n; })[0];
+      if (!place) return toast("⚠️", "Choose a place from the list.");
+      if (editMode === "stop") changeTrip("/stops", place, "Stop added at " + place.name + ".");
+      else changeTrip("/destination", place, "Drop-off changed to " + place.name + ".");
+    });
+  })();
 
   function noTrip() {
     setText("rideTitle", "No active ride");

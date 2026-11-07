@@ -56,6 +56,13 @@
   .tog.on::after{left:21px;}
   .toast{position:fixed;bottom:1.2rem;left:50%;transform:translateX(-50%) translateY(150%);background:var(--card);border:1px solid var(--border);border-radius:12px;padding:.7rem 1rem;font-size:.84rem;z-index:9700;transition:transform .3s;max-width:calc(100% - 2rem);}
   .toast.show{transform:translateX(-50%) translateY(0);}
+  .bk-list{display:flex;flex-direction:column;gap:.45rem;}
+  .bk{display:flex;align-items:center;gap:.6rem;width:100%;text-align:left;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:.6rem .75rem;color:var(--text);cursor:pointer;font:inherit;font-size:.82rem;}
+  .bk.on{border-color:var(--accent);background:rgba(0,229,160,.06);}
+  .bk .n{width:22px;height:22px;border-radius:50%;background:var(--border);display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:700;flex-shrink:0;}
+  .bk.on .n{background:var(--accent);color:#00140d;}
+  .bk .s{margin-left:auto;font-size:.7rem;color:var(--muted);white-space:nowrap;}
+  .sr-stop{width:14px;height:14px;border-radius:3px;background:var(--accent2);box-shadow:0 0 0 4px rgba(0,128,255,.25);}
   [hidden]{display:none!important;}
   @media(max-width:820px){main{grid-template-columns:1fr;grid-template-rows:48vh auto;}aside{border-left:0;border-top:1px solid var(--border);}}
 </style>
@@ -79,11 +86,18 @@
       <div class="stage-sub" id="stageSub"></div>
     </div>
 
+    <div class="card" id="bookingsCard" hidden>
+      <div class="k" id="bookingsTitle">Passengers in your car</div>
+      <div class="bk-list" id="bookings"></div>
+    </div>
     <div class="card" id="tripCard" hidden>
       <div class="k">Passenger</div>
       <div class="row"><span>Name</span><span id="pName">—</span></div>
       <div class="row"><span>Pickup</span><span id="pPickup">—</span></div>
+      <div class="row" id="pStopsRow" hidden><span>Stops</span><span id="pStops">—</span></div>
       <div class="row"><span>Drop-off</span><span id="pDest">—</span></div>
+      <div class="row"><span>Passengers</span><span id="pParty">—</span></div>
+      <div class="row"><span>Ride</span><span id="pKind">—</span></div>
       <div class="row"><span>Distance</span><span id="pKm">—</span></div>
       <div class="row"><span>Fare</span><span id="pFare">—</span></div>
     </div>

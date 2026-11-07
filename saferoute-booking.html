@@ -408,10 +408,10 @@
           <div class="input-wrap">
             <span class="iicon">👥</span>
             <select id="passengerCount">
-              <option>1 passenger</option>
-              <option>2 passengers</option>
-              <option>3 passengers</option>
-              <option>4 passengers</option>
+              <option value="1">Just me</option>
+              <option value="2">Me + 1 more</option>
+              <option value="3">Me + 2 more</option>
+              <option value="4">Me + 3 more</option>
             </select>
           </div>
         </div>
@@ -437,55 +437,46 @@
       <div class="form-section-title">Choose your ride</div>
       <div class="form-section-sub">Select the option that best suits your needs.</div>
       <div class="ride-types" style="margin-top:1rem;" id="rideTypes">
-        <div class="ride-type-card selected" data-fare="20" onclick="selectRide(this,20,'Standard')">
+        <div class="ride-type-card selected" data-type="car" role="button" tabindex="0" onclick="selectVehicle(this)">
           <div class="rt-icon">🚕</div>
           <div class="rt-body">
-            <div class="rt-name">Standard <span class="rt-badge badge-safe">Most Popular</span></div>
-            <div class="rt-desc">Reliable everyday taxi · up to 4 passengers</div>
+            <div class="rt-name">Car <span class="rt-badge badge-safe">Most Popular</span></div>
+            <div class="rt-desc">Everyday taxi · up to 4 passengers</div>
           </div>
-          <div class="rt-price">
-            <div class="rt-fare">EC$20</div>
-            <div class="rt-eta">~8 min away</div>
-          </div>
+          <div class="rt-price"><div class="rt-fare" data-fare-for="car">EC$–</div><div class="rt-eta">4 seats</div></div>
           <div class="rt-check"></div>
         </div>
-        <div class="ride-type-card" data-fare="30" onclick="selectRide(this,30,'Comfort')">
+        <div class="ride-type-card" data-type="suv" role="button" tabindex="0" onclick="selectVehicle(this)">
           <div class="rt-icon">🚙</div>
           <div class="rt-body">
-            <div class="rt-name">Comfort <span class="rt-badge badge-pop">New</span></div>
-            <div class="rt-desc">Premium sedan · A/C · extra legroom</div>
+            <div class="rt-name">SUV</div>
+            <div class="rt-desc">Room for 6 and luggage</div>
           </div>
-          <div class="rt-price">
-            <div class="rt-fare">EC$30</div>
-            <div class="rt-eta">~12 min away</div>
-          </div>
+          <div class="rt-price"><div class="rt-fare" data-fare-for="suv">EC$–</div><div class="rt-eta">6 seats</div></div>
           <div class="rt-check"></div>
         </div>
-        <div class="ride-type-card" data-fare="45" onclick="selectRide(this,45,'Executive')">
-          <div class="rt-icon">🏎</div>
-          <div class="rt-body">
-            <div class="rt-name">Executive</div>
-            <div class="rt-desc">Top-rated drivers · luxury vehicle</div>
-          </div>
-          <div class="rt-price">
-            <div class="rt-fare">EC$45</div>
-            <div class="rt-eta">~18 min away</div>
-          </div>
-          <div class="rt-check"></div>
-        </div>
-        <div class="ride-type-card" data-fare="8" onclick="selectRide(this,8,'ShareRide')">
+        <div class="ride-type-card" data-type="van" role="button" tabindex="0" onclick="selectVehicle(this)">
           <div class="rt-icon">🚐</div>
           <div class="rt-body">
-            <div class="rt-name">ShareRide</div>
-            <div class="rt-desc">Split cost with nearby passengers · eco-friendly</div>
+            <div class="rt-name">Van</div>
+            <div class="rt-desc">Groups, events, the airport · up to 14</div>
           </div>
-          <div class="rt-price">
-            <div class="rt-fare">EC$8</div>
-            <div class="rt-eta">~6 min away</div>
-          </div>
+          <div class="rt-price"><div class="rt-fare" data-fare-for="van">EC$–</div><div class="rt-eta">14 seats</div></div>
           <div class="rt-check"></div>
         </div>
       </div>
+
+      <div class="privacy-row" style="margin-top:1rem;">
+        <div class="pr-left">
+          <span class="pr-icon">🛣</span>
+          <div>
+            <div class="pr-label">Open route</div>
+            <div class="pr-sub" id="openRouteSub">Other SafeRoute passengers going your way can share the car. If someone joins, you pay 2/3 of the fare.</div>
+          </div>
+        </div>
+        <div class="toggle on" id="openRouteTog" role="switch" aria-checked="true" aria-label="Open route" tabindex="0" onclick="toggleOpenRoute()"></div>
+      </div>
+      <div class="fare-summary" style="margin-top:.75rem;" id="fareEstimate" aria-live="polite"></div>
     </div>
 
     <!-- STEP 3: Privacy (hidden) -->
@@ -571,13 +562,7 @@
         </div>
 
         <!-- Fare summary -->
-        <div class="fare-summary" id="fareSummary">
-          <div class="fare-row"><span class="label">Ride type</span><span class="value" id="cfType">Standard</span></div>
-          <div class="fare-row"><span class="label">Distance</span><span class="value">3.2 km</span></div>
-          <div class="fare-row"><span class="label">Base fare</span><span class="value" id="cfBase">EC$20</span></div>
-          <div class="fare-row"><span class="label">SafeRoute fee</span><span class="value">EC$2</span></div>
-          <div class="fare-row total"><span class="label">Total</span><span class="value" id="cfTotal">EC$22</span></div>
-        </div>
+        <div class="fare-summary" id="fareSummary"></div>
 
         <!-- Privacy summary -->
         <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:1rem;">
@@ -628,11 +613,11 @@
   </div>
 
   <div class="eta-pill">
-    <div class="ep-item"><span class="ep-val">8<span style="font-size:.7rem">min</span></span><span class="ep-key">ETA</span></div>
+    <div class="ep-item"><span class="ep-val" id="etaDisplay">–<span style="font-size:.7rem">min</span></span><span class="ep-key">Trip time</span></div>
     <div class="ep-div"></div>
-    <div class="ep-item"><span class="ep-val">3.2<span style="font-size:.7rem">km</span></span><span class="ep-key">Distance</span></div>
+    <div class="ep-item"><span class="ep-val" id="kmDisplay">–<span style="font-size:.7rem">km</span></span><span class="ep-key">Distance</span></div>
     <div class="ep-div"></div>
-    <div class="ep-item"><span class="ep-val" id="fareDisplay">EC$20</span><span class="ep-key">Fare</span></div>
+    <div class="ep-item"><span class="ep-val" id="fareDisplay">EC$–</span><span class="ep-key">Fare</span></div>
   </div>
 </div>
 
@@ -719,9 +704,7 @@ function advanceStep() {
     // populate confirm
     document.getElementById('cfPickup').textContent = document.getElementById('pickup').value;
     document.getElementById('cfDest').textContent   = document.getElementById('destination').value;
-    document.getElementById('cfType').textContent   = selectedType;
-    document.getElementById('cfBase').textContent   = 'EC$'+selectedFare.toLocaleString();
-    document.getElementById('cfTotal').textContent  = 'EC$'+(selectedFare+2).toLocaleString();
+    if (window.SRB) SRB.refresh();
     document.getElementById('btnText').textContent  = '✅ Confirm Booking';
   } else {
     document.getElementById('btnText').textContent = currentStep===3?'Review Booking →':'Continue →';
@@ -884,7 +867,9 @@ setTimeout(drawBgMap,100);
 </script>
 <script src="assets/safety.js"></script>
 <script src="assets/places.js"></script>
+<script src="assets/fares.js"></script>
 <script src="assets/api.js"></script>
+<script src="assets/booking-fares.js"></script>
 <script>
 /* Places list for both boxes, and "use my location" (works in demo and live mode). */
 (function () {
@@ -924,7 +909,7 @@ SR.ready().then(function (live) {
     if (!dest) return showToast('⚠️', 'Choose your destination from the list.');
     var btn = document.getElementById('mainBtn');
     btn.classList.add('loading');
-    SR.api('/api/trips', { body: { pickup: { lat: pickup.lat, lng: pickup.lng, name: pickup.name }, dest: { lat: dest.lat, lng: dest.lng, name: dest.name } } })
+    SR.api('/api/trips', { body: Object.assign({ pickup: { lat: pickup.lat, lng: pickup.lng, name: pickup.name }, dest: { lat: dest.lat, lng: dest.lng, name: dest.name } }, SRB.options()) })
       .then(function () { showToast('🚕', 'Ride requested. Finding you a driver…'); setTimeout(function () { location.href = 'saferoute-tracking.html'; }, 800); })
       .catch(function (e) { showToast('⚠️', e.message); })
       .finally(function () { btn.classList.remove('loading'); document.getElementById('btnText').style.opacity = '1'; });

@@ -516,6 +516,17 @@
             </div>
           </div>
           <div class="field">
+            <label for="regVehicleType">Vehicle type</label>
+            <div class="input-wrap">
+              <span class="input-icon">💺</span>
+              <select id="regVehicleType">
+                <option value="car">Car · up to 4 passengers</option>
+                <option value="suv">SUV · up to 6 passengers</option>
+                <option value="van">Van / minibus · up to 14 passengers</option>
+              </select>
+            </div>
+          </div>
+          <div class="field">
             <label for="regPlate">Plate number (H plate)</label>
             <div class="input-wrap">
               <span class="input-icon">🔖</span>
@@ -715,7 +726,7 @@ SR.ready().then(function (live) {
     if (role === 'driver' && (!v('regVehicle') || !v('regPlate'))) { showMsg('error', 'Drivers need a vehicle and plate number.'); return; }
     var body = { name: v('regFirst') + ' ' + v('regLast'), email: v('regEmail'), password: pass, role: role };
     if (v('regPhone')) body.phone = v('regPhone');
-    if (role === 'driver') { body.vehicle = v('regVehicle'); body.plate = v('regPlate'); }
+    if (role === 'driver') { body.vehicle = v('regVehicle'); body.plate = v('regPlate'); body.vehicleType = document.getElementById('regVehicleType').value; }
     busy('registerBtn', true);
     SR.api('/api/auth/register', { body: body, auth: false })
       .then(function (r) { showMsg('success', 'Account created! Welcome to SafeRoute, ' + v('regFirst') + ' 👋'); setTimeout(function () { go(r); }, 900); })

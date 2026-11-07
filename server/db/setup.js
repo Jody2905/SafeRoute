@@ -5,6 +5,7 @@ const fs = require('fs');
 const path = require('path');
 const { execFileSync } = require('child_process');
 const { pool, makePool, directUrl } = require('../src/db');
+const { migrate } = require('./migrate');
 
 (async () => {
   const direct = makePool(directUrl());
@@ -17,6 +18,9 @@ const { pool, makePool, directUrl } = require('../src/db');
       console.log('Database schema created.');
       created = true;
     }
+    // Database updates (new columns etc.) run every start, once each.
+    const applied = await migrate(direct);
+    if (applied.length) console.log('Database updated:', applied.join(', '));
   } finally {
     await direct.end();
     await pool.end();

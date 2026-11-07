@@ -5,6 +5,7 @@ const path = require('path');
 const readline = require('readline');
 const { execFileSync } = require('child_process');
 const { makePool, directUrl } = require('../src/db');
+const { migrate } = require('./migrate');
 
 (async () => {
   if (!process.argv.includes('--yes')) {
@@ -15,6 +16,8 @@ const { makePool, directUrl } = require('../src/db');
   }
   const db = makePool(directUrl());
   await db.query(fs.readFileSync(path.join(__dirname, 'schema.sql'), 'utf8'));
+  await db.query('DROP TABLE IF EXISTS schema_migrations');
+  await migrate(db);
   await db.end();
   console.log('Tables recreated.');
   execFileSync(process.execPath, [path.join(__dirname, 'seed.js')], { stdio: 'inherit' });

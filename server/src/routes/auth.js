@@ -3,6 +3,7 @@ const bcrypt = require('bcryptjs');
 const { z } = require('zod');
 const { pool, tx, audit } = require('../db');
 const { signToken, requireAuth } = require('../auth');
+const { seatsFor } = require('../services/pricing');
 
 const router = express.Router();
 // Compared against when an email is unknown, so response time doesn't reveal which emails have accounts.
@@ -16,16 +17,17 @@ const Register = z.object({
   role: z.enum(['passenger', 'driver']).default('passenger'),
   vehicle: z.string().trim().min(3).max(60).optional(),
   plate: z.string().trim().toUpperCase().regex(/^[A-Z]{1,3} ?[0-9]{1,5}$/, 'Enter a plate like H 4421').optional(),
+  vehicleType: z.enum(['car', 'suv', 'van']).default('car'),
 });
 
 async function me(id, db = pool) {
   const { rows } = await db.query(
-    `SELECT u.id, u.email, u.name, u.phone, u.role, d.vehicle, d.plate, d.verified, d.rating
+    `SELECT u.id, u.email, u.name, u.phone, u.role, d.vehicle, d.plate, d.verified, d.rating, d.vehicle_type, d.seats
        FROM users u LEFT JOIN drivers d ON d.user_id = u.id WHERE u.id = $1`, [id]);
   const u = rows[0];
   if (!u) return null;
   return { id: u.id, email: u.email, name: u.name, phone: u.phone, role: u.role,
-    driver: u.role === 'driver' ? { vehicle: u.vehicle, plate: u.plate, verified: u.verified, rating: u.rating } : undefined };
+    driver: u.role === 'driver' ? { vehicle: u.vehicle, plate: u.plate, verified: u.verified, rating: u.rating, vehicleType: u.vehicle_type, seats: u.seats } : undefined };
 }
 
 router.post('/register', async (req, res) => {
@@ -39,8 +41,8 @@ router.post('/register', async (req, res) => {
         [b.email, hash, b.name, b.phone || null, b.role]);
       if (b.role === 'driver') {
         // Real drivers are checked by an admin first. DEMO_MODE verifies them straight away.
-        await db.query('INSERT INTO drivers (user_id, vehicle, plate, verified) VALUES ($1,$2,$3,$4)',
-          [u.id, b.vehicle, b.plate.replace(/^([A-Z]+) ?/, '$1 '), process.env.DEMO_MODE === 'true']);
+        await db.query('INSERT INTO drivers (user_id, vehicle, plate, verified, vehicle_type, seats) VALUES ($1,$2,$3,$4,$5,$6)',
+          [u.id, b.vehicle, b.plate.replace(/^([A-Z]+) ?/, '$1 '), process.env.DEMO_MODE === 'true', b.vehicleType, seatsFor(b.vehicleType)]);
       }
       await audit(db, u.id, 'auth.register', u.id, { role: b.role });
       return u;

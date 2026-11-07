@@ -44,6 +44,7 @@ let rhea, kemar, marcus, sandra, port;
 
 before(async () => {
   await pool.query(fs.readFileSync(path.join(__dirname, '../db/schema.sql'), 'utf8'));
+  await require('../db/migrate').migrate(pool);
   rhea = await register('rhea@test.dev');
   kemar = await register('kemar@test.dev');
   marcus = await register('marcus@test.dev', 'driver', { vehicle: 'Silver Toyota Corolla', plate: 'h4421' });
@@ -82,7 +83,7 @@ test('a full trip: request, accept, live location, PIN, ride, complete', async (
 
   // Drivers see the request with a distance, but not the exact pickup point or PIN
   const open = await api().get('/api/trips/open?lat=13.155&lng=-61.226').set(auth(marcus)).expect(200);
-  const listed = open.body.find(t => t.id === trip.id);
+  const listed = open.body.requests.find(t => t.id === trip.id);
   assert.ok(listed && listed.awayKm > 0);
   assert.equal(listed.pin, undefined);
   assert.equal(listed.pickupLat, undefined);

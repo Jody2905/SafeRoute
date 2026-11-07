@@ -435,6 +435,19 @@
   .leaflet-control-attribution a { color: var(--accent2) !important; }
   .sr-pin { display:flex; align-items:center; justify-content:center; font-size:1.4rem; background:none; border:none; }
   .sr-car { font-size:1.6rem; filter: drop-shadow(0 0 6px rgba(0,229,160,.7)); }
+  .sr-stop { width:13px; height:13px; border-radius:3px; background:var(--accent2); box-shadow:0 0 0 4px rgba(0,128,255,.25); }
+  .fare-line { display:flex; justify-content:space-between; gap:1rem; font-size:.8rem; padding:.22rem 0; }
+  .fare-line span:first-child { color:var(--muted); }
+  .fare-line.total { border-top:1px solid var(--border); margin-top:.35rem; padding-top:.5rem; font-weight:700; }
+  .fare-line.total span:last-child { color:var(--accent); font-family:'Syne',sans-serif; font-size:1rem; }
+  .fare-note { font-size:.72rem; color:var(--muted); line-height:1.45; margin-top:.5rem; }
+  .fare-note.shared { color:var(--accent); }
+  .trip-edit { display:flex; flex-wrap:wrap; gap:.4rem; margin-top:.7rem; }
+  .trip-edit button { flex:1 1 30%; background:var(--card); border:1px solid var(--border); color:var(--text); border-radius:10px; padding:.5rem .4rem; font-size:.74rem; cursor:pointer; font-family:inherit; }
+  .trip-edit button:hover { border-color:var(--accent2); }
+  .edit-form { display:flex; gap:.4rem; margin-top:.6rem; }
+  .edit-form input { flex:1; min-width:0; background:var(--surface); border:1px solid var(--border); color:var(--text); border-radius:10px; padding:.5rem .65rem; font-size:.8rem; font-family:inherit; }
+  .edit-form button { background:var(--accent2); color:#fff; border:none; border-radius:10px; padding:.5rem .8rem; font-size:.78rem; cursor:pointer; }
   .sr-pickup { width:14px; height:14px; border-radius:50%; background:var(--accent); box-shadow:0 0 0 4px rgba(0,229,160,.25); }
   .sr-me { width:18px; height:18px; border-radius:50%; background:#0080ff; border:3px solid #fff; box-shadow:0 0 0 6px rgba(0,128,255,.25); }
   .leaflet-tooltip.sr-label, .leaflet-tooltip { background:rgba(7,9,15,.92) !important; color:var(--text) !important; border:1px solid var(--border) !important; box-shadow:none !important; font-family:'DM Sans',sans-serif; font-size:.72rem; font-weight:600; }
@@ -469,6 +482,7 @@
   .pickup-banner span b { color:var(--text); }
   .pickup-banner button { margin-top:.35rem; padding:.6rem; border-radius:10px; border:1px solid var(--border); background:#0d1117; color:var(--text); font-size:.78rem; cursor:pointer; }
   .pickup-banner[hidden] { display:none; }
+  #fareSection [hidden], #fareSection[hidden] { display:none !important; }
 </style>
 </head>
 <body>
@@ -619,6 +633,23 @@
         <button class="dact-btn" onclick="showToast('💬','Opening chat...')">💬 Chat</button>
         <button class="dact-btn" onclick="showToast('🚨','Reporting issue...')">🚨 Report</button>
       </div>
+    </div>
+
+    <!-- Fare and trip changes (live mode) -->
+    <div class="panel-section" id="fareSection" hidden>
+      <div class="ps-title" id="fareTitle">Your Fare</div>
+      <div id="fareLines" aria-live="polite"></div>
+      <div class="fare-note" id="fareNote"></div>
+      <div class="trip-edit" id="tripEdit">
+        <button type="button" id="btnAddStop">＋ Add a stop</button>
+        <button type="button" id="btnChangeDest">↪ Change drop-off</button>
+        <button type="button" id="btnDropHere" hidden>🛑 Drop me here</button>
+      </div>
+      <form class="edit-form" id="editForm" hidden>
+        <input id="editPlace" list="trackPlaces" autocomplete="off" aria-label="Place" placeholder="Choose a place"/>
+        <button type="submit" id="editGo">Add</button>
+      </form>
+      <datalist id="trackPlaces"></datalist>
     </div>
 
     <!-- Location Sharing -->

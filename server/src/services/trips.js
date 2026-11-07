@@ -1,7 +1,8 @@
 // Trip loading, the three views of a trip (passenger / driver / share link), and route alerts.
 const crypto = require('crypto');
 const { pool, audit } = require('../db');
-const { haversine, distanceToRoute } = require('./geo');
+const { haversine, distanceToRoute, routeLength } = require('./geo');
+const pricing = require('./pricing');
 
 const ACTIVE = ['requested', 'accepted', 'arrived', 'in_progress'];
 const LIVE = ['accepted', 'arrived', 'in_progress']; // a driver is on the way or driving
@@ -18,7 +19,10 @@ const firstName = n => String(n || '').split(' ')[0];
 
 async function loadTrip(db, id) {
   const { rows } = await db.query(
-    `SELECT t.*, p.name AS passenger_name, d.name AS driver_name, dr.vehicle, dr.plate, dr.rating
+    `SELECT t.*, p.name AS passenger_name, d.name AS driver_name, dr.vehicle, dr.plate, dr.rating,
+            dr.vehicle_type AS driver_vehicle_type, dr.seats AS driver_seats,
+            (SELECT count(*)::int FROM trips g WHERE g.group_id = t.group_id AND g.id <> t.id
+               AND g.status IN ('accepted', 'arrived', 'in_progress')) AS others_in_car
        FROM trips t
        JOIN users p ON p.id = t.passenger_id
   LEFT JOIN users d ON d.id = t.driver_id
@@ -48,7 +52,14 @@ async function views(tripId, db = pool) {
     route: t.route,
     routeKm: Math.round(t.route_m / 100) / 10,
     fareXcd: t.fare_xcd,
-    driver: t.driver_id ? { name: firstName(t.driver_name) + (t.driver_name.split(' ')[1] ? ' ' + t.driver_name.split(' ')[1][0] + '.' : ''), vehicle: t.vehicle, plate: t.plate, rating: t.rating } : null,
+    fareBreakdown: t.fare_breakdown,
+    partySize: t.party_size,
+    vehicleType: t.vehicle_type,
+    openRoute: t.open_route,
+    shared: t.shared,
+    othersInCar: t.others_in_car,      // other bookings currently in or heading to the same car (no names: privacy)
+    stops: (t.stops || []).map(p => ({ name: p.name, lat: p.lat, lng: p.lng })),
+    driver: t.driver_id ? { name: firstName(t.driver_name) + (t.driver_name.split(' ')[1] ? ' ' + t.driver_name.split(' ')[1][0] + '.' : ''), vehicle: t.vehicle, plate: t.plate, rating: t.rating, vehicleType: t.driver_vehicle_type, seats: t.driver_seats } : null,
     position: live && t.last_lat != null ? { lat: t.last_lat, lng: t.last_lng, speedKmh: t.last_speed_kmh, at: t.last_at } : null,
     times: { requested: t.requested_at, accepted: t.accepted_at, arrived: t.arrived_at, started: t.started_at, completed: t.completed_at, cancelled: t.cancelled_at },
   };
@@ -61,7 +72,7 @@ async function views(tripId, db = pool) {
     driver: { ...base, role: 'driver', pickup: { lat: t.pickup_lat, lng: t.pickup_lng, name: t.pickup_name },
       passengerName: firstName(t.passenger_name), pinAttemptsLeft: Math.max(0, 3 - t.pin_attempts), alerts },
     share: ACTIVE.includes(t.status) || t.status === 'completed'
-      ? { ...base, role: 'share', passengerName: firstName(t.passenger_name), route: t.status === 'completed' ? [] : t.route }
+      ? { ...base, role: 'share', passengerName: firstName(t.passenger_name), route: t.status === 'completed' ? [] : t.route, fareXcd: undefined, fareBreakdown: undefined, stops: base.stops.map(p => ({ name: p.name })) }
       : null,
   };
 }
@@ -91,9 +102,17 @@ async function tripIdForShareToken(token, db = pool) {
 async function checkAlerts(db, trip, p, now = new Date()) {
   if (trip.status !== 'in_progress') return null;
   const created = [];
+  // In a shared ride the driver may leave this route to collect another passenger (up to 1 km away)
+  // or wait for them at their pickup. Neither is suspicious, so those checks pause meanwhile.
+  let collecting = false, waiting = false;
+  if (trip.group_id) {
+    const { rows } = await db.query(`SELECT status FROM trips WHERE group_id = $1 AND id <> $2 AND status IN ('accepted', 'arrived')`, [trip.group_id, trip.id]);
+    collecting = rows.some(r => r.status === 'accepted');
+    waiting = rows.some(r => r.status === 'arrived');
+  }
 
   // Off route?
-  const off = distanceToRoute(p, trip.route) > OFF_ROUTE_M;
+  const off = !collecting && !waiting && distanceToRoute(p, trip.route) > OFF_ROUTE_M;
   if (off) {
     const since = trip.off_route_since ? new Date(trip.off_route_since) : now;
     if (!trip.off_route_since) await db.query('UPDATE trips SET off_route_since = $2 WHERE id = $1', [trip.id, now]);
@@ -105,7 +124,7 @@ async function checkAlerts(db, trip, p, now = new Date()) {
   // Stopped too long? (close to the destination doesn't count)
   const nearDest = haversine(p, [trip.dest_lat, trip.dest_lng]) < 150;
   const stillHere = trip.stopped_lat != null && haversine(p, [trip.stopped_lat, trip.stopped_lng]) < STOP_RADIUS_M;
-  if (!nearDest && stillHere) {
+  if (!nearDest && stillHere && !waiting) {
     if ((now - new Date(trip.stopped_since)) / 1000 >= STOP_S) created.push(await raise(db, trip.id, 'long_stop', { stoppedSince: trip.stopped_since }));
   } else {
     await db.query('UPDATE trips SET stopped_since = $2, stopped_lat = $3, stopped_lng = $4 WHERE id = $1', [trip.id, now, p[0], p[1]]);
@@ -151,4 +170,13 @@ async function purgeOldLocations(db = pool) {
   return rows.length;
 }
 
-module.exports = { ACTIVE, LIVE, hashToken, loadTrip, views, activeTripId, tripIdForShareToken, checkAlerts, raise, escalateUnanswered, purgeOldLocations };
+/** Works the fare out again from the booking's planned route and options, and saves it. */
+async function reprice(db, tripId) {
+  const { rows: [t] } = await db.query('SELECT route_m, party_size, open_route, shared, stops FROM trips WHERE id = $1', [tripId]);
+  if (!t) return null;
+  const q = pricing.price({ routeM: t.route_m, partySize: t.party_size, openRoute: t.open_route, shared: t.shared, stops: (t.stops || []).length });
+  await db.query('UPDATE trips SET fare_xcd = $2, base_xcd = $3, fare_breakdown = $4 WHERE id = $1', [tripId, q.total, q.base, JSON.stringify(q.lines)]);
+  return q;
+}
+
+module.exports = { reprice, ACTIVE, LIVE, hashToken, loadTrip, views, activeTripId, tripIdForShareToken, checkAlerts, raise, escalateUnanswered, purgeOldLocations };
